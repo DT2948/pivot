@@ -1,0 +1,31 @@
+allow_internships: false
+allow_unknown_visa: true
+reject_us_citizenship_required: true
+reject_security_clearance_required: true
+location_country: US
+
+alert_thresholds:
+  target_company: 7
+  curated_repo: 8
+  unverified_source: 9
+  rules_only_fallback: 8.5
+
+gemini:
+  enabled: true
+  model: gemini-2.5-flash-lite
+  max_jobs_per_run: 5
+  min_rule_score_before_gemini: 6
+  fallback_to_rules: true
+
+email:
+  smtp_host_env: SMTP_HOST
+  smtp_port_env: SMTP_PORT
+  smtp_username_env: SMTP_USERNAME
+  smtp_password_env: SMTP_PASSWORD
+  from_env: ALERT_EMAIL_FROM
+  to_env: ALERT_EMAIL_TO
+
+debug:
+  write_candidates: true
+  write_rejections: true
+  write_source_health: true

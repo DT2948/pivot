@@ -1,0 +1,14 @@
+{
+  "jobs": [
+    {
+      "id": 101,
+      "title": "Software Engineer, Backend - Early Career",
+      "location": {"name": "San Francisco, CA"},
+      "absolute_url": "https://example.com/anthropic/backend",
+      "content": "<p>New graduate backend systems role. Python, distributed systems, cloud infrastructure. OPT accepted.</p>",
+      "departments": [{"name": "Engineering"}],
+      "offices": [{"name": "San Francisco"}],
+      "updated_at": "2026-07-01T00:00:00Z"
+    }
+  ]
+}

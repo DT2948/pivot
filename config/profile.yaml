@@ -1,0 +1,49 @@
+candidate:
+  name: Darsh Tejusinghani
+  education:
+    school: Penn State
+    degree: Bachelor of Science in Computer Science
+    graduation: May 2027
+    minors:
+      - Mathematics
+      - Artificial Intelligence Engineering
+    gpa: 3.83
+  target_roles:
+    - backend software engineering
+    - systems engineering
+    - infrastructure engineering
+    - platform engineering
+    - AI/ML engineering
+    - distributed systems
+  interests:
+    - backend systems
+    - distributed systems
+    - AI engineering
+    - infrastructure
+    - graph ML
+    - applied ML systems
+  skills:
+    - C
+    - Python
+    - SQL
+    - FastAPI
+    - Flask
+    - LangChain
+    - Docker
+    - Linux
+    - Git
+    - Nginx
+    - PyTorch
+    - PyTorch Geometric
+    - AWS
+    - Gemini API
+    - NetworkX
+  experience:
+    - GNN and reinforcement learning research for Minimum Flow Decomposition in RNA sequencing graphs.
+    - THON Systems Technology Captain working with AWS, Docker, ECS Fargate, MySQL, and production deployments.
+    - 3D AI emotional support agent using FastAPI, Whisper, EmoCatcher, Gemma LLM, F5-TTS, and Unreal Engine.
+    - Veriti crisis verification platform with Kotlin Android, FastAPI, Next.js, Gemini multimodal verification, and clustering.
+    - DroughtGuard food-insecurity prediction system with XGBoost, Flask, Leaflet.js, GeoJSON, Gemini via LangChain, Nginx, and Gunicorn.
+    - Mycord multithreaded TCP chat client in C with custom binary protocol and partial I/O handling.
+  certifications:
+    - NVIDIA DLI Fundamentals of Deep Learning

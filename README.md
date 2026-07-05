@@ -1,0 +1,101 @@
+# Pivot
+
+Pivot monitors new-grad software engineering roles and turns noisy job feeds into a personalized shortlist.
+
+Pivot is a personal, zero-cost job alert system. It fetches public target-company postings and raw Markdown job feeds, normalizes them, filters for Darsh Tejusinghani's new-grad SWE profile, optionally scores a small capped set with Gemini free tier, and emails only strong new matches.
+
+## What It Does
+
+- Runs locally with `python -m pivot.main`.
+- Runs every 6 hours with GitHub Actions.
+- Supports Anthropic through Greenhouse plus SimplifyJobs and SpeedyApply raw Markdown sources.
+- Uses deterministic filtering before Gemini to control cost and noise.
+- Falls back to rule-only scoring if Gemini is missing, over quota, or broken.
+- Tracks seen jobs in `data/seen_jobs.json`.
+- Writes `data/last_run_candidates.json`, `data/last_run_rejections.json`, and `data/last_run_source_health.json`.
+
+## What It Does Not Do
+
+Pivot does not run a website or always-on server. It does not use GitHub Pages. GitHub Actions temporarily runs the Python script on a schedule.
+
+It also does not scrape LinkedIn, bypass CAPTCHAs, use proxies, use paid APIs, use paid databases, or require a resume PDF.
+
+## Quickstart
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
+ruff check .
+pytest
+python -m pivot.main --dry-run --no-gemini
+```
+
+For Gemini scoring, create a free Gemini API key in Google AI Studio and set `GEMINI_API_KEY`.
+
+For Gmail SMTP, use `smtp.gmail.com`, port `587`, enable 2-Step Verification, create a Gmail App Password, and store it as `SMTP_PASSWORD`. Never commit it.
+
+Required email variables:
+
+```text
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your-email@gmail.com
+SMTP_PASSWORD=your-gmail-app-password
+ALERT_EMAIL_FROM=your-email@gmail.com
+ALERT_EMAIL_TO=your-email@gmail.com
+```
+
+Send a test email:
+
+```powershell
+python -m pivot.main --send-test-email
+```
+
+## CLI
+
+```powershell
+python -m pivot.main --dry-run
+python -m pivot.main --send-test-email
+python -m pivot.main --max-gemini-jobs 5
+python -m pivot.main --no-gemini
+python -m pivot.main --config-dir config
+python -m pivot.main --log-level INFO
+```
+
+Dry-runs fetch, filter, score, print source health, and write debug artifacts. They do not send email or update `seen_jobs.json`.
+
+## GitHub Actions Setup
+
+Push this repo to GitHub, then add repository secrets under Settings -> Secrets and variables -> Actions:
+
+- `GEMINI_API_KEY` optional
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_USERNAME`
+- `SMTP_PASSWORD`
+- `ALERT_EMAIL_FROM`
+- `ALERT_EMAIL_TO`
+
+Open the Actions tab, choose `Pivot Job Alerts`, and run it manually once with `workflow_dispatch`. The schedule is `17 */6 * * *`; edit `.github/workflows/pivot.yml` to change it. Disable the workflow from the Actions tab if needed.
+
+## Configuration
+
+- Edit `config/profile.yaml` to tune Darsh's scoring profile.
+- Edit `config/settings.yaml` for thresholds, internship policy, visa handling, and Gemini limits.
+- Edit `config/companies.yaml` to enable or disable sources.
+
+To add a Greenhouse company, add a target company with `adapter: greenhouse` and its public board token. To add a GitHub job repo, add a raw `raw.githubusercontent.com` Markdown URL under `github_markdown_sources`.
+
+## Debugging Alerts
+
+Inspect `data/last_run_rejections.json` to see why jobs were rejected. Inspect `data/last_run_candidates.json` to see jobs that passed filtering but may not have crossed the email threshold. Source failures are in `data/last_run_source_health.json`.
+
+## Privacy
+
+Do not commit phone numbers, secrets, app passwords, or unnecessary personal data. `config/profile.yaml` is the primary scoring input. A resume is optional and should be redacted; see `docs/resume/README.md`.
+
+## Current Limitations
+
+Tesla, NVIDIA, Meta, Google, and Apple are graceful placeholders in this first version. Anthropic, Simplify New Grad, and SpeedyApply 2027 are the useful working sources.

@@ -1,0 +1,48 @@
+target_companies:
+  - name: Anthropic
+    adapter: greenhouse
+    board_token: anthropic
+    enabled: true
+    source_priority: 10
+  - name: Tesla
+    adapter: custom
+    enabled: false
+    best_effort: true
+    source_priority: 20
+  - name: NVIDIA
+    adapter: workday_custom
+    enabled: false
+    best_effort: true
+    source_priority: 20
+  - name: Meta
+    adapter: custom
+    enabled: false
+    best_effort: true
+    source_priority: 20
+  - name: Google
+    adapter: custom
+    enabled: false
+    best_effort: true
+    source_priority: 20
+  - name: Apple
+    adapter: custom
+    enabled: false
+    best_effort: true
+    source_priority: 20
+
+github_markdown_sources:
+  - name: Simplify New Grad
+    raw_url: https://raw.githubusercontent.com/SimplifyJobs/New-Grad-Positions/dev/README.md
+    enabled: true
+    source_priority: 60
+    verify_original: false
+  - name: SpeedyApply 2027
+    raw_url: https://raw.githubusercontent.com/speedyapply/2027-SWE-College-Jobs/main/NEW_GRAD_USA.md
+    enabled: true
+    source_priority: 55
+    verify_original: false
+  - name: Simplify Summer 2026 Internships
+    raw_url: https://raw.githubusercontent.com/SimplifyJobs/Summer2026-Internships/dev/README.md
+    enabled: false
+    source_priority: 80
+    verify_original: false

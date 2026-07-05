@@ -1,0 +1,66 @@
+[
+  {
+    "candidate_count": 0,
+    "error": null,
+    "fetched_count": 388,
+    "source": "Anthropic",
+    "source_type": "target_company",
+    "status": "success"
+  },
+  {
+    "candidate_count": 0,
+    "error": null,
+    "fetched_count": 0,
+    "source": "Tesla",
+    "source_type": "target_company",
+    "status": "success"
+  },
+  {
+    "candidate_count": 0,
+    "error": null,
+    "fetched_count": 0,
+    "source": "NVIDIA",
+    "source_type": "target_company",
+    "status": "success"
+  },
+  {
+    "candidate_count": 0,
+    "error": null,
+    "fetched_count": 0,
+    "source": "Meta",
+    "source_type": "target_company",
+    "status": "success"
+  },
+  {
+    "candidate_count": 0,
+    "error": null,
+    "fetched_count": 0,
+    "source": "Google",
+    "source_type": "target_company",
+    "status": "success"
+  },
+  {
+    "candidate_count": 0,
+    "error": null,
+    "fetched_count": 0,
+    "source": "Apple",
+    "source_type": "target_company",
+    "status": "success"
+  },
+  {
+    "candidate_count": 4,
+    "error": null,
+    "fetched_count": 234,
+    "source": "Simplify New Grad",
+    "source_type": "curated_repo",
+    "status": "success"
+  },
+  {
+    "candidate_count": 0,
+    "error": null,
+    "fetched_count": 15,
+    "source": "SpeedyApply 2027",
+    "source_type": "curated_repo",
+    "status": "success"
+  }
+]

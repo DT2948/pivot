@@ -1,0 +1,50 @@
+[
+  {
+    "company": "Nuro",
+    "final_score": 5.6,
+    "fit_summary": "Rule-based fit based on role, seniority, location, and sponsorship signals.",
+    "location": "Mountain View, CA",
+    "rule_score": 5.6,
+    "score_source": "rules_only",
+    "should_alert": false,
+    "source": "Simplify New Grad",
+    "title": "Software Engineer New Grad - Performance",
+    "url": "https://nuro.ai/careersitem?gh_jid=7978432&utm_source=Simplify&ref=Simplify"
+  },
+  {
+    "company": "General Dynamics Mission Systems",
+    "final_score": 5.55,
+    "fit_summary": "Rule-based fit based on role, seniority, location, and sponsorship signals.",
+    "location": "Pittsfield, MA",
+    "rule_score": 5.55,
+    "score_source": "rules_only",
+    "should_alert": false,
+    "source": "Simplify New Grad",
+    "title": "Software Engineer - Entry Level",
+    "url": "https://careers-gdms.icims.com/jobs/72777/job?mobile=true&needsRedirect=false&utm_source=Simplify&ref=Simplify"
+  },
+  {
+    "company": "General Dynamics Mission Systems",
+    "final_score": 6.1,
+    "fit_summary": "Rule-based fit based on role, seniority, location, and sponsorship signals.",
+    "location": "Pittsfield, MA",
+    "rule_score": 6.1,
+    "score_source": "rules_only",
+    "should_alert": false,
+    "source": "Simplify New Grad",
+    "title": "Entry Level Infrastructure Software Engineer",
+    "url": "https://careers-gdms.icims.com/jobs/72580/job?mobile=true&needsRedirect=false&utm_source=Simplify&ref=Simplify"
+  },
+  {
+    "company": "N1",
+    "final_score": 5.55,
+    "fit_summary": "Rule-based fit based on role, seniority, location, and sponsorship signals.",
+    "location": "4 locations SF Remote in USA Europe NYC",
+    "rule_score": 5.55,
+    "score_source": "rules_only",
+    "should_alert": false,
+    "source": "Simplify New Grad",
+    "title": "New Grad Software Engineer - Backend Rust",
+    "url": "https://jobs.ashbyhq.com/n1/a3e25c84-0846-454a-b2fc-a356c2a713bd/application?utm_source=Simplify&ref=Simplify"
+  }
+]

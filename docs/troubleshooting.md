@@ -30,7 +30,7 @@ Check the Actions tab. Scheduled workflows can be delayed. Run manually with `wo
 
 ## Source parser failed
 
-The source should be marked `failed` without crashing the run. Placeholder adapters are marked `not_implemented`, which is expected for Tesla, NVIDIA, Meta, Google, and Apple until direct adapters exist. Check logs and source health. Disable a broken real source in `config/companies.yaml` if it stays broken.
+The source should be marked `failed` without crashing the run. Tesla may report `failed` with a 403 when its official careers API blocks the runner. Placeholder adapters are marked `not_implemented`, which is expected for Meta, Google, and Apple until direct adapters exist. Check logs and source health. Disable a broken real source in `config/companies.yaml` if it stays broken.
 
 ## Strong curated role did not alert
 

@@ -105,9 +105,9 @@ def build_fetchers(companies: dict[str, Any]) -> list[Fetcher]:
         if kind == "greenhouse":
             fetchers.append(GreenhouseFetcher(name, item["board_token"], source_priority=priority))
         elif name.lower() == "tesla":
-            fetchers.append(build_tesla_fetcher())
+            fetchers.append(build_tesla_fetcher(source_priority=priority))
         elif name.lower() == "nvidia":
-            fetchers.append(build_nvidia_fetcher())
+            fetchers.append(build_nvidia_fetcher(source_priority=priority))
         elif name.lower() == "meta":
             fetchers.append(build_meta_fetcher())
         elif name.lower() == "google":

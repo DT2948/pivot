@@ -2,7 +2,7 @@
 
 Pivot has a simple batch pipeline.
 
-Fetchers load jobs from public sources. `GreenhouseFetcher` supports Anthropic through the public board API. `GitHubMarkdownAdapter` reads raw Markdown from curated public repos. Tesla, NVIDIA, Meta, Google, and Apple are currently best-effort placeholder adapters that return empty lists with clear warnings and source health status `not_implemented` until stable public parsers are implemented.
+Fetchers load jobs from public sources. `GreenhouseFetcher` supports Anthropic through the public board API. `NvidiaWorkdayFetcher` uses NVIDIA's official Workday CXS careers API. `TeslaCareersFetcher` uses Tesla's official careers API and reports `failed` if Tesla blocks the runner with a 403. `GitHubMarkdownAdapter` reads raw Markdown from curated public repos. Meta, Google, and Apple are currently best-effort placeholder adapters with source health status `not_implemented` until stable public parsers are implemented.
 
 Every source becomes a normalized `Job` model. This gives filtering, scoring, email, and state code one common shape.
 

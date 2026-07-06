@@ -25,6 +25,6 @@
 
 `config/companies.yaml` contains `target_companies` and `github_markdown_sources`. Keep GitHub sources as raw Markdown URLs from `raw.githubusercontent.com`, not normal GitHub HTML pages.
 
-Current direct target-company support is Anthropic through Greenhouse. Tesla, NVIDIA, Meta, Google, and Apple are configured as best-effort placeholders and report `not_implemented` until direct adapters exist. Simplify New Grad and SpeedyApply 2027 remain backup curated sources.
+Current direct target-company support is Anthropic through Greenhouse, NVIDIA through Workday, and Tesla through Tesla's official careers API. Tesla may report `failed` if the endpoint returns 403 from the runner. Meta, Google, and Apple remain best-effort placeholders and report `not_implemented` until direct adapters exist. Simplify New Grad and SpeedyApply 2027 remain backup curated sources.
 
 Rule-only alerts require `can_rule_alert=true`. Target-company roles also need a clear early-career signal such as new grad, university grad, new college grad, entry level, early career, software engineer I, 0-2 years, university hire, or graduate program. Curated repo roles need a strong new-grad signal and the curated rule-only score threshold.

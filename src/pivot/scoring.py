@@ -23,9 +23,22 @@ def threshold_for(job: Job, settings: dict[str, Any], score_source: str) -> floa
 
     thresholds = settings.get("alert_thresholds", {})
     if score_source in {"rules_only", "rules_fallback"}:
+        if job.source_type == "curated_repo":
+            return float(
+                thresholds.get(
+                    "curated_repo_rule_only_alert_threshold",
+                    thresholds.get(
+                        "rule_only_fallback_alert_threshold",
+                        thresholds.get("rules_only_fallback", 9.0),
+                    ),
+                )
+            )
         return float(
             thresholds.get(
-                "rule_only_fallback_alert_threshold", thresholds.get("rules_only_fallback", 9.0)
+                "target_company_rule_only_alert_threshold",
+                thresholds.get(
+                    "rule_only_fallback_alert_threshold", thresholds.get("rules_only_fallback", 9.0)
+                ),
             )
         )
     if job.verification_status in {"unverified", "failed"}:

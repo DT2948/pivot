@@ -10,6 +10,8 @@ alert_thresholds:
   unverified_source: 9
   rules_only_fallback: 9.0
   rule_only_fallback_alert_threshold: 9.0
+  target_company_rule_only_alert_threshold: 9.0
+  curated_repo_rule_only_alert_threshold: 8.5
 
 gemini:
   enabled: true
@@ -31,6 +33,7 @@ debug:
   write_candidates: true
   write_rejections: true
   write_source_health: true
+
 
 
 

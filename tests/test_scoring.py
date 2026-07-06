@@ -138,3 +138,88 @@ def test_required_gemini_review_blocks_fallback_alert() -> None:
 
     assert not allowed
     assert any("required Gemini" in reason for reason in rejections)
+
+
+def test_curated_repo_rule_only_score_8_9_can_alert_at_curated_threshold() -> None:
+    settings = {"alert_thresholds": {"curated_repo_rule_only_alert_threshold": 8.5}}
+    job = make_job(
+        "Software Engineer New Grad - Production Infrastructure",
+        "Infrastructure systems.",
+        source_type="curated_repo",
+    )
+    rule = RuleScore(
+        score=8.9,
+        reasons=["new-grad", "production infrastructure"],
+        rejection_reasons=[],
+        is_candidate=True,
+        requires_gemini_review=False,
+        can_rule_alert=True,
+        role_family="systems_infrastructure",
+    )
+
+    scored = scored_from_rules(job, rule, settings, "rules_fallback")
+
+    assert scored.should_alert
+
+
+def test_curated_repo_rule_only_score_8_1_does_not_alert_at_curated_threshold() -> None:
+    settings = {"alert_thresholds": {"curated_repo_rule_only_alert_threshold": 8.5}}
+    job = make_job(
+        "New Grad Software Engineer - Backend Rust",
+        "Backend systems.",
+        source_type="curated_repo",
+    )
+    rule = RuleScore(
+        score=8.1,
+        reasons=["new-grad", "backend", "Rust"],
+        rejection_reasons=[],
+        is_candidate=True,
+        requires_gemini_review=False,
+        can_rule_alert=True,
+        role_family="software_engineering",
+    )
+
+    scored = scored_from_rules(job, rule, settings, "rules_fallback")
+
+    assert not scored.should_alert
+
+
+def test_target_company_high_rule_score_without_gemini_does_not_alert() -> None:
+    settings = {"alert_thresholds": {"target_company_rule_only_alert_threshold": 9.0}}
+    job = make_job("Full-Stack Software Engineer, Reinforcement Learning", "ML systems.")
+    rule = RuleScore(
+        score=9.8,
+        reasons=["software engineering", "AI/ML"],
+        rejection_reasons=[],
+        is_candidate=True,
+        requires_gemini_review=True,
+        can_rule_alert=False,
+        role_family="ml_ai_engineering",
+    )
+
+    scored = scored_from_rules(job, rule, settings, "rules_fallback")
+
+    assert not scored.should_alert
+
+
+def test_fellowship_still_blocked_with_curated_thresholds_present() -> None:
+    settings = {
+        "alert_thresholds": {
+            "target_company_rule_only_alert_threshold": 9.0,
+            "curated_repo_rule_only_alert_threshold": 8.5,
+        }
+    }
+    job = make_job("Anthropic Fellows Program", "AI systems fellowship.")
+    rule = RuleScore(
+        score=9.9,
+        reasons=["AI/ML"],
+        rejection_reasons=[],
+        is_candidate=True,
+        requires_gemini_review=True,
+        can_rule_alert=False,
+        role_family="fellowship_program",
+    )
+
+    scored = scored_from_rules(job, rule, settings, "rules_fallback")
+
+    assert not scored.should_alert

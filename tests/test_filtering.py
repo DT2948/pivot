@@ -377,3 +377,45 @@ def test_target_company_university_hire_signal_can_rule_alert() -> None:
     assert score.is_candidate
     assert not score.requires_gemini_review
     assert score.can_rule_alert
+
+def test_google_direct_university_grad_swe_candidate_ignores_sponsorship_text() -> None:
+    job = Job(
+        source="Google",
+        source_type="target_company",
+        source_priority=20,
+        company="Google",
+        external_id="google-ugrad",
+        title="Software Engineer, University Graduate, Cloud Infrastructure",
+        location="New York, NY, USA",
+        url="https://www.google.com/about/careers/applications/jobs/results/123",
+        description=(
+            "University graduate role building distributed systems, backend infrastructure, "
+            "and cloud services. Must be authorized to work without sponsorship. "
+            "U.S. citizenship required. Active security clearance required."
+        ),
+        verification_status="verified",
+    )
+
+    score = score_job(job, SETTINGS)
+
+    assert score.is_candidate
+    assert score.can_rule_alert
+    assert "Google direct source" in score.reasons
+    assert "university graduate signal" in score.reasons
+    assert not any("sponsorship" in reason.lower() for reason in score.rejection_reasons)
+    assert not any("citizenship" in reason.lower() for reason in score.rejection_reasons)
+    assert not any("clearance" in reason.lower() for reason in score.rejection_reasons)
+
+
+def test_curated_repo_no_sponsorship_still_blocks_candidate() -> None:
+    job = make_job(
+        "Software Engineer New Grad - Backend",
+        "Must be authorized to work without sponsorship. Backend systems role.",
+        source_type="curated_repo",
+        verification_status="unverified",
+    )
+
+    score = score_job(job, SETTINGS)
+
+    assert not score.is_candidate
+    assert any("sponsorship" in reason.lower() for reason in score.rejection_reasons)

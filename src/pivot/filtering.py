@@ -61,6 +61,7 @@ OTHER_HARD_NEGATIVES = [
     ("advanced degree required", r"\bphd\s+required\b|\badvanced\s+degree\s+required\b"),
 ]
 
+TARGET_COMPANIES = {"anthropic", "nvidia", "tesla", "google", "meta", "apple"}
 NON_TARGET_HARD_REJECT_FAMILIES = {"sales", "legal", "product_management", "support"}
 NON_RULE_ALERT_FAMILIES = {
     "sales",
@@ -243,6 +244,7 @@ def score_job(job: Job, settings: dict[str, Any] | None = None) -> RuleScore:
     title_lower = job.title.lower()
     description = job.description or ""
     role_family = classify_role_family(job)
+    direct_target_company = _is_direct_target_company(job)
     strong_new_grad = has_strong_new_grad_signal(job, settings)
     title_clear_engineering = _title_is_clear_engineering(job.title)
     reasons: list[str] = [f"role_family: {role_family}"]
@@ -325,25 +327,30 @@ def score_job(job: Job, settings: dict[str, Any] | None = None) -> RuleScore:
         score -= 1.0
         reasons.append("repo no-sponsorship flag treated as unverified concern")
 
-    visa_signal = job.visa_signal
-    if visa_signal == "unknown":
-        visa_signal = detect_visa_signal(job.description or text)
-    if visa_signal == "false":
-        rejections.append("original posting indicates no sponsorship/citizenship/clearance issue")
-    elif visa_signal == "true":
-        score += 1.0
-        reasons.append("positive sponsorship signal")
+    if not direct_target_company:
+        visa_signal = job.visa_signal
+        if visa_signal == "unknown":
+            visa_signal = detect_visa_signal(job.description or text)
+        if visa_signal == "false":
+            rejections.append("original posting indicates no sponsorship/citizenship/clearance issue")
+        elif visa_signal == "true":
+            score += 1.0
+            reasons.append("positive sponsorship signal")
 
-    if settings.get("reject_us_citizenship_required", True) and requires_us_citizenship(text):
-        rejections.append("U.S. citizenship required")
-    if settings.get("reject_security_clearance_required", True) and requires_security_clearance(
-        text
-    ):
-        rejections.append("security clearance required")
+        if settings.get("reject_us_citizenship_required", True) and requires_us_citizenship(text):
+            rejections.append("U.S. citizenship required")
+        if settings.get("reject_security_clearance_required", True) and requires_security_clearance(
+            text
+        ):
+            rejections.append("security clearance required")
 
     if job.source_type == "target_company":
         score += 0.5
         reasons.append("direct target-company source")
+        if job.company.lower() == "google" or job.source.lower() == "google":
+            reasons.append("Google direct source")
+        if re.search(r"\buniversity\s+grad(?:uate)?\b", lower, re.I):
+            reasons.append("university graduate signal")
     elif job.verification_status != "verified":
         score -= 0.4
         reasons.append("unverified curated repo source")
@@ -484,6 +491,10 @@ def is_us_location(location: str | None) -> bool:
     has_us = any(_location_part_is_us(part) for part in parts)
     has_non_us = any(_location_part_is_non_us(part) for part in parts)
     return has_us or not has_non_us and False
+
+
+def _is_direct_target_company(job: Job) -> bool:
+    return job.source_type == "target_company" and job.company.lower() in TARGET_COMPANIES
 
 
 def _can_rule_alert(

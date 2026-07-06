@@ -8,8 +8,8 @@ Pivot is a personal, zero-cost job alert system. It fetches public target-compan
 
 - Runs locally with `python -m pivot.main`.
 - Runs every 6 hours with GitHub Actions.
-- Supports Anthropic through Greenhouse, NVIDIA through Workday, Tesla through its official careers API, plus SimplifyJobs and SpeedyApply raw Markdown backup sources.
-- Keeps Meta, Google, and Apple configured as graceful best-effort placeholders until direct adapters are implemented.
+- Supports Anthropic through Greenhouse, NVIDIA through Workday, Google through official Careers pages, Tesla through its official careers API, plus SimplifyJobs and SpeedyApply raw Markdown backup sources.
+- Keeps Meta and Apple configured as graceful best-effort placeholders until direct adapters are implemented.
 - Uses deterministic filtering before Gemini to control cost and noise.
 - Falls back safely to rules if Gemini is missing, over quota, unavailable, or broken.
 - Tracks seen jobs in `data/seen_jobs.json`.
@@ -112,4 +112,4 @@ Do not commit phone numbers, secrets, app passwords, or unnecessary personal dat
 
 ## Current Limitations
 
-NVIDIA is implemented through its official Workday careers API. Tesla is implemented against its official careers API, but that endpoint may return 403 from some runners and will report `failed` rather than `not_implemented` when blocked. Meta, Google, and Apple remain graceful placeholders. Anthropic, NVIDIA, Simplify New Grad, and SpeedyApply 2027 are the useful working sources today.
+NVIDIA is implemented through its official Workday careers API. Google is implemented through official Google Careers result/detail pages. Tesla is implemented against its official careers API, but that endpoint may return 403 from some runners and will report `failed` rather than `not_implemented` when blocked. Meta and Apple remain graceful placeholders. Anthropic, NVIDIA, Google, Simplify New Grad, and SpeedyApply 2027 are the useful working sources today.

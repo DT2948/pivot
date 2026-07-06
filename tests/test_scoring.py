@@ -223,3 +223,38 @@ def test_fellowship_still_blocked_with_curated_thresholds_present() -> None:
     scored = scored_from_rules(job, rule, settings, "rules_fallback")
 
     assert not scored.should_alert
+
+def test_target_company_gemini_sponsorship_text_does_not_block_google() -> None:
+    job = Job(
+        source="Google",
+        source_type="target_company",
+        source_priority=20,
+        company="Google",
+        external_id="1",
+        title="Software Engineer, University Graduate, Cloud Infrastructure",
+        location="New York, NY",
+        url="https://www.google.com/about/careers/applications/jobs/results/1",
+        description="University graduate backend infrastructure role.",
+        verification_status="verified",
+    )
+    rule = RuleScore(
+        score=9.5,
+        reasons=["Google direct source", "university graduate signal"],
+        rejection_reasons=[],
+        is_candidate=True,
+        requires_gemini_review=False,
+        can_rule_alert=True,
+        role_family="systems_infrastructure",
+    )
+
+    allowed, rejections = final_alert_allowed(
+        job,
+        rule,
+        SETTINGS,
+        score_source="gemini",
+        gemini_valid=True,
+        gemini_text="The role says no visa sponsorship and U.S. citizenship required.",
+    )
+
+    assert allowed
+    assert rejections == []

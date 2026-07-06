@@ -111,7 +111,7 @@ def build_fetchers(companies: dict[str, Any]) -> list[Fetcher]:
         elif name.lower() == "meta":
             fetchers.append(build_meta_fetcher())
         elif name.lower() == "google":
-            fetchers.append(build_google_fetcher())
+            fetchers.append(build_google_fetcher(source_priority=priority))
         elif name.lower() == "apple":
             fetchers.append(build_apple_fetcher())
         else:

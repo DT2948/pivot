@@ -8,6 +8,7 @@ from pivot.models import Job, RuleScore, ScoredJob
 from pivot.verification import detect_visa_signal
 
 BLOCKED_ALERT_FAMILIES = {"sales", "legal", "finance", "product_management", "support"}
+TARGET_COMPANIES = {"anthropic", "nvidia", "tesla", "google", "meta", "apple"}
 HARD_REJECTION_PATTERNS = [
     "no sponsorship",
     "no cpt",
@@ -60,14 +61,15 @@ def final_alert_allowed(
     """Apply final hard gates that no scorer is allowed to bypass."""
 
     rejection_reasons = list(rule.rejection_reasons)
+    direct_target_company = _is_direct_target_company(job)
     role_family = rule.role_family
     if role_family == "fellowship_program" and not settings.get("allow_fellowship_alerts", False):
         rejection_reasons.append("fellowship/program roles are not allowed to alert by default")
     if role_family in BLOCKED_ALERT_FAMILIES:
         rejection_reasons.append(f"blocked alert role family: {role_family}")
-    if _has_hard_rejection(rejection_reasons):
+    if not direct_target_company and _has_hard_rejection(rejection_reasons):
         rejection_reasons.append("hard rejection blocks alert")
-    if gemini_text and detect_visa_signal(gemini_text) == "false":
+    if not direct_target_company and gemini_text and detect_visa_signal(gemini_text) == "false":
         rejection_reasons.append(
             "Gemini assessment indicates sponsorship/citizenship/clearance concern"
         )
@@ -115,6 +117,10 @@ def scored_from_rules(
         rule_reasons=rule.reasons,
         rejection_reasons=final_rejections,
     )
+
+
+def _is_direct_target_company(job: Job) -> bool:
+    return job.source_type == "target_company" and job.company.lower() in TARGET_COMPANIES
 
 
 def _has_hard_rejection(rejection_reasons: list[str]) -> bool:

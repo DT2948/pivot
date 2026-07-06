@@ -14,6 +14,11 @@ target_companies:
     enabled: false
     best_effort: true
     source_priority: 20
+  - name: Microsoft
+    adapter: custom
+    enabled: false
+    best_effort: true
+    source_priority: 20
   - name: Meta
     adapter: custom
     enabled: false

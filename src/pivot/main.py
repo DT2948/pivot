@@ -17,6 +17,7 @@ from pivot.fetchers.github_markdown import GitHubMarkdownAdapter, MarkdownSource
 from pivot.fetchers.google import build_fetcher as build_google_fetcher
 from pivot.fetchers.greenhouse import GreenhouseFetcher
 from pivot.fetchers.meta import build_fetcher as build_meta_fetcher
+from pivot.fetchers.microsoft import build_fetcher as build_microsoft_fetcher
 from pivot.fetchers.tesla import build_fetcher as build_tesla_fetcher
 from pivot.fetchers.workday import build_nvidia_fetcher
 from pivot.filtering import score_job
@@ -110,6 +111,8 @@ def build_fetchers(companies: dict[str, Any]) -> list[Fetcher]:
             fetchers.append(build_nvidia_fetcher(source_priority=priority))
         elif name.lower() == "meta":
             fetchers.append(build_meta_fetcher(source_priority=priority))
+        elif name.lower() == "microsoft":
+            fetchers.append(build_microsoft_fetcher(source_priority=priority))
         elif name.lower() == "google":
             fetchers.append(build_google_fetcher(source_priority=priority))
         elif name.lower() == "apple":

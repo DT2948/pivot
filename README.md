@@ -8,7 +8,7 @@ Pivot is a personal, zero-cost job alert system. It fetches public target-compan
 
 - Runs locally with `python -m pivot.main`.
 - Runs every 6 hours with GitHub Actions.
-- Supports Anthropic through Greenhouse, NVIDIA through Workday, Google through official Careers pages, Meta through its official Careers GraphQL operation, Tesla through its official careers API, plus SimplifyJobs and SpeedyApply raw Markdown backup sources.
+- Supports Anthropic through Greenhouse, NVIDIA through Workday, Google through official Careers pages, Microsoft through its official Careers API, Meta through its official Careers GraphQL operation, Tesla through its official careers API, plus SimplifyJobs and SpeedyApply raw Markdown backup sources.
 - Keeps Apple configured as a graceful best-effort placeholder until a direct adapter is implemented.
 - Uses deterministic filtering before Gemini to control cost and noise.
 - Falls back safely to rules if Gemini is missing, over quota, unavailable, or broken.
@@ -112,4 +112,4 @@ Do not commit phone numbers, secrets, app passwords, or unnecessary personal dat
 
 ## Current Limitations
 
-NVIDIA is implemented through its official Workday careers API. Google is implemented through official Google Careers result/detail pages. Meta is implemented through its official Careers GraphQL operation, but that endpoint may return 400 from some runners and will report `failed` rather than `not_implemented` when blocked. Tesla is implemented against its official careers API, but that endpoint may return 403 from some runners. Apple remains a graceful placeholder. Anthropic, NVIDIA, Google, Simplify New Grad, and SpeedyApply 2027 are the useful working sources today.
+NVIDIA is implemented through its official Workday careers API. Google is implemented through official Google Careers result/detail pages. Microsoft is implemented through the official `apply.careers.microsoft.com` search and position-detail API. Meta is attempted through its official Careers GraphQL operation using normal public HTTP only; live anonymous requests currently may return `Meta public careers endpoint returned 400`, so Pivot reports `failed` rather than `not_implemented` and relies on Simplify as backup coverage when blocked. Tesla is implemented against its official careers API, but that endpoint may return 403 from some runners. Apple remains a graceful placeholder. Anthropic, NVIDIA, Google, Microsoft, Simplify New Grad, and SpeedyApply 2027 are the useful working sources today. The open-source `anon767/maangcrawler` project was inspected only as a reference; Pivot does not depend on it or call its hosted demo.

@@ -8,7 +8,7 @@ from pivot.models import Job, RuleScore, ScoredJob
 from pivot.verification import detect_visa_signal
 
 BLOCKED_ALERT_FAMILIES = {"sales", "legal", "finance", "product_management", "support"}
-TARGET_COMPANIES = {"anthropic", "nvidia", "tesla", "google", "meta", "apple"}
+TARGET_COMPANIES = {"anthropic", "nvidia", "tesla", "google", "microsoft", "meta", "apple"}
 HARD_REJECTION_PATTERNS = [
     "no sponsorship",
     "no cpt",

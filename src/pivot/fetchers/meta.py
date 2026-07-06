@@ -1,4 +1,4 @@
-﻿"""Meta Careers official GraphQL adapter."""
+"""Meta Careers official GraphQL adapter."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 from pivot.fetchers.base import Fetcher
-from pivot.models import Job
+from pivot.models import Job, SourceHealth
 
 LOGGER = logging.getLogger(__name__)
 USER_AGENT = "PivotJobAlerts/0.1"
@@ -57,7 +57,10 @@ ADVANCED_DEGREE_RE = re.compile(
     r"pursuing\s+a?\s*(?:master'?s|masters|ph\.?d\.?)|advanced\s+degree\s+required",
     re.I,
 )
-BACHELORS_ACCEPTED_RE = re.compile(r"\bbachelor(?:'s|s)?\b|\bb\.?s\.?\b|equivalent\s+practical\s+experience", re.I)
+BACHELORS_ACCEPTED_RE = re.compile(
+    r"\bbachelor(?:'s|s)?\b|\bb\.?s\.?\b|equivalent\s+practical\s+experience",
+    re.I,
+)
 
 
 class MetaCareersFetcher(Fetcher):
@@ -73,6 +76,27 @@ class MetaCareersFetcher(Fetcher):
         self.timeout_seconds = timeout_seconds
         self.max_results = max_results
 
+    def safe_fetch(self) -> tuple[list[Job], SourceHealth]:
+        """Fetch Meta jobs while reporting expected public endpoint failures cleanly."""
+
+        try:
+            jobs = self.fetch()
+        except RuntimeError as exc:
+            LOGGER.warning("Source %s failed: %s", self.name, exc)
+            return [], SourceHealth(
+                source=self.name,
+                source_type=self.source_type,
+                status="failed",
+                fetched_count=0,
+                error=str(exc),
+            )
+        return jobs, SourceHealth(
+            source=self.name,
+            source_type=self.source_type,
+            status="success",
+            fetched_count=len(jobs),
+        )
+
     def fetch(self) -> list[Job]:
         """Fetch Meta Careers search suggestions and normalize focused roles.
 
@@ -81,19 +105,13 @@ class MetaCareersFetcher(Fetcher):
         surface as source health `failed`, not as a placeholder success.
         """
 
-        headers = {
-            "User-Agent": USER_AGENT,
-            "Accept": "application/json",
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Referer": f"{META_BASE}/jobsearch/",
-        }
         by_id: dict[str, Job] = {}
-        with httpx.Client(timeout=self.timeout_seconds, headers=headers) as client:
+        with httpx.Client(timeout=self.timeout_seconds, headers=_request_headers()) as client:
             for term in META_SEARCH_TERMS:
-                payload = _search_payload(term)
-                response = client.post(META_GRAPHQL_ENDPOINT, data=payload)
-                response.raise_for_status()
-                jobs = parse_meta_jobs_response(response.json(), self.source_priority)
+                request = build_meta_search_request(term)
+                response = client.post(request["url"], data=request["data"])
+                _raise_for_meta_error(response)
+                jobs = parse_meta_jobs_response(_json_response(response), self.source_priority)
                 for job in jobs:
                     by_id.setdefault(job.external_id, job)
                     if len(by_id) >= self.max_results:
@@ -122,10 +140,41 @@ def parse_meta_jobs_response(payload: dict[str, Any], source_priority: int = 20)
             continue
         if _advanced_degree_specific(title, description):
             continue
-        if description and THREE_PLUS_RE.search(description) and not EARLY_CAREER_TITLE_RE.search(title):
+        if (
+            description
+            and THREE_PLUS_RE.search(description)
+            and not EARLY_CAREER_TITLE_RE.search(title)
+        ):
             continue
         jobs.append(_normalize_meta_job(item, title, description, source_priority))
     return jobs
+
+
+def build_meta_search_request(term: str) -> dict[str, Any]:
+    """Build the public Meta Careers GraphQL request.
+
+    This is intentionally plain form-encoded Relay data. It does not depend on copied
+    browser cookies, authentication, automation, or bot-bypass tokens.
+    """
+
+    return {
+        "method": "POST",
+        "url": META_GRAPHQL_ENDPOINT,
+        "headers": _request_headers(),
+        "data": _search_payload(term),
+    }
+
+
+def _request_headers() -> dict[str, str]:
+    return {
+        "User-Agent": USER_AGENT,
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Origin": META_BASE,
+        "Referer": f"{META_BASE}/jobs/",
+        "X-FB-Friendly-Name": META_SEARCH_FRIENDLY_NAME,
+    }
 
 
 def _search_payload(term: str) -> dict[str, str]:
@@ -137,6 +186,26 @@ def _search_payload(term: str) -> dict[str, str]:
             {"search_input": {"q": term, "results_per_page": "FIVE"}}, separators=(",", ":")
         ),
     }
+
+
+def _raise_for_meta_error(response: httpx.Response) -> None:
+    try:
+        response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        status = exc.response.status_code
+        if status == 400:
+            raise RuntimeError("Meta public careers endpoint returned 400") from exc
+        raise
+
+
+def _json_response(response: httpx.Response) -> dict[str, Any]:
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        raise RuntimeError("Meta public careers endpoint returned malformed JSON") from exc
+    if not isinstance(payload, dict):
+        raise RuntimeError("Meta public careers endpoint returned malformed JSON")
+    return payload
 
 
 def _extract_meta_job_items(payload: dict[str, Any]) -> list[dict[str, Any]]:
@@ -188,7 +257,9 @@ def _normalize_meta_job(
 
 
 def _is_focused_meta_role(title: str, combined_text: str) -> bool:
-    return bool(TITLE_INCLUDE_PATTERN.search(combined_text)) and not TITLE_EXCLUDE_PATTERN.search(title)
+    return bool(TITLE_INCLUDE_PATTERN.search(combined_text)) and not TITLE_EXCLUDE_PATTERN.search(
+        title
+    )
 
 
 def _advanced_degree_specific(title: str, description: str | None) -> bool:
@@ -225,12 +296,16 @@ def _location_text(item: dict[str, Any]) -> str | None:
             if isinstance(entry, str):
                 parts.append(entry)
             elif isinstance(entry, dict):
-                text = _first_text(entry, "name", "location_display_name", "city", "state", "country")
+                text = _first_text(
+                    entry, "name", "location_display_name", "city", "state", "country"
+                )
                 if text:
                     parts.append(text)
         return "; ".join(dict.fromkeys(parts)) or None
     if isinstance(value, dict):
-        return _first_text(value, "name", "location_display_name", "city", "state", "country") or None
+        return (
+            _first_text(value, "name", "location_display_name", "city", "state", "country") or None
+        )
     return None
 
 

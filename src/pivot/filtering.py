@@ -61,7 +61,7 @@ OTHER_HARD_NEGATIVES = [
     ("advanced degree required", r"\bphd\s+required\b|\badvanced\s+degree\s+required\b"),
 ]
 
-TARGET_COMPANIES = {"anthropic", "nvidia", "tesla", "google", "meta", "apple"}
+TARGET_COMPANIES = {"anthropic", "nvidia", "tesla", "google", "microsoft", "meta", "apple"}
 NON_TARGET_HARD_REJECT_FAMILIES = {"sales", "legal", "product_management", "support"}
 NON_RULE_ALERT_FAMILIES = {
     "sales",
@@ -99,17 +99,32 @@ BACHELORS_ACCEPTED_RE = re.compile(
 ADVANCED_DEGREE_TITLE_PATTERNS: list[tuple[str, str]] = [
     ("doctoral/postdoctoral role", r"\bdoctoral\b|\bdoctorate\b|\bpostdoc(?:toral)?\b"),
     ("PhD-specific role", r"\bph\.?d\.?\b|\bphd\s+internship\b|\bphd\s+university\s+grad"),
-    ("Master's-specific role", r"\bmaster'?s\b|\bmasters\b|\bm\.?s\.?\b|\bmaster'?s\s+university\s+grad"),
+    (
+        "Master's-specific role",
+        r"\bmaster'?s\b|\bmasters\b|\bm\.?s\.?\b|\bmaster'?s\s+university\s+grad",
+    ),
 ]
 ADVANCED_DEGREE_EXCLUSIVE_PATTERNS: list[tuple[str, str]] = [
     ("doctoral/postdoctoral role", r"\bdoctoral\b|\bdoctorate\b|\bpostdoc(?:toral)?\b"),
     ("advanced-degree-only role", r"\badvanced\s+degree\s+required\b"),
-    ("Master's/PhD-specific role", r"currently\s+enrolled\s+in\s+a?\s*(?:master'?s|masters|ph\.?d\.?)"),
+    (
+        "Master's/PhD-specific role",
+        r"currently\s+enrolled\s+in\s+a?\s*(?:master'?s|masters|ph\.?d\.?)",
+    ),
     ("Master's/PhD-specific role", r"pursuing\s+a?\s*(?:master'?s|masters|ph\.?d\.?)"),
-    ("PhD-specific role", r"\bph\.?d\.?\s+(?:required|internship|university\s+grad|candidate|program)\b"),
+    (
+        "PhD-specific role",
+        r"\bph\.?d\.?\s+(?:required|internship|university\s+grad|candidate|program)\b",
+    ),
     ("Master's-specific role", r"\bmaster'?s\s+(?:required|university\s+grad|candidate|program)\b"),
-    ("advanced-degree-only role", r"minimum\s+qualifications?[\s\S]{0,300}?\b(?:master'?s|masters|ph\.?d\.?)\b"),
-    ("graduate research role", r"\bgraduate\s+research\s+role\b|\bresearch\s+scientist[\s\S]{0,120}\bph\.?d\.?\b"),
+    (
+        "advanced-degree-only role",
+        r"minimum\s+qualifications?[\s\S]{0,300}?\b(?:master'?s|masters|ph\.?d\.?)\b",
+    ),
+    (
+        "graduate research role",
+        r"\bgraduate\s+research\s+role\b|\bresearch\s+scientist[\s\S]{0,120}\bph\.?d\.?\b",
+    ),
 ]
 
 US_STATE_CODES = {
@@ -323,7 +338,9 @@ def score_job(job: Job, settings: dict[str, Any] | None = None) -> RuleScore:
         score -= 4.0
         rejections.append(degree_rejection)
 
-    if EXPERIENCE_REQUIREMENT_RE.search(description) and not TITLE_EXPLICIT_EARLY_CAREER_RE.search(job.title):
+    if EXPERIENCE_REQUIREMENT_RE.search(description) and not TITLE_EXPLICIT_EARLY_CAREER_RE.search(
+        job.title
+    ):
         score -= 2.5
         rejections.append("years-of-experience mismatch")
 
@@ -363,7 +380,9 @@ def score_job(job: Job, settings: dict[str, Any] | None = None) -> RuleScore:
         if visa_signal == "unknown":
             visa_signal = detect_visa_signal(job.description or text)
         if visa_signal == "false":
-            rejections.append("original posting indicates no sponsorship/citizenship/clearance issue")
+            rejections.append(
+                "original posting indicates no sponsorship/citizenship/clearance issue"
+            )
         elif visa_signal == "true":
             score += 1.0
             reasons.append("positive sponsorship signal")
@@ -382,9 +401,13 @@ def score_job(job: Job, settings: dict[str, Any] | None = None) -> RuleScore:
             reasons.append("Google direct source")
         if job.company.lower() == "meta" or job.source.lower() == "meta":
             reasons.append("Meta direct source")
+        if job.company.lower() == "microsoft" or job.source.lower() == "microsoft":
+            reasons.append("Microsoft direct source")
         if re.search(r"\buniversity\s+grad(?:uate)?\b", lower, re.I):
             reasons.append("university graduate signal")
-        if re.search(r"\bnew\s+grad(?:uate)?\b|\bnew\s+college\s+grad\b|\bearly\s+career\b", lower, re.I):
+        if re.search(
+            r"\bnew\s+grad(?:uate)?\b|\bnew\s+college\s+grad\b|\bearly\s+career\b", lower, re.I
+        ):
             reasons.append("undergraduate new-grad signal")
     elif job.verification_status != "verified":
         score -= 0.4
@@ -542,6 +565,7 @@ def _advanced_degree_rejection_reason(job: Job) -> str | None:
             continue
         return reason
     return None
+
 
 def _is_direct_target_company(job: Job) -> bool:
     return job.source_type == "target_company" and job.company.lower() in TARGET_COMPANIES

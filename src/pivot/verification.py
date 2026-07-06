@@ -9,6 +9,7 @@ NO_SPONSORSHIP_PATTERNS = [
     r"do(?:es)?\s+not\s+sponsor",
     r"unable\s+to\s+sponsor",
     r"will\s+not\s+sponsor",
+    r"sponsorship\s+unavailable",
     r"without\s+(?:the\s+need\s+for\s+)?sponsorship",
     r"must\s+not\s+require\s+sponsorship",
     r"no\s+cpt",

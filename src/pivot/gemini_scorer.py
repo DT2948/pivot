@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
 from typing import Any
 
 from pivot.models import Job, RuleScore, ScoredJob
-from pivot.scoring import scored_from_rules, threshold_for
+from pivot.scoring import final_alert_allowed, scored_from_rules, threshold_for
 
 LOGGER = logging.getLogger(__name__)
 
@@ -55,31 +56,47 @@ class GeminiScorer:
                 continue
             try:
                 payload = self._score_one(client, job)
+                final_score = normalize_gemini_score(payload.get("score"))
             except Exception as exc:  # noqa: BLE001
                 LOGGER.warning("Gemini failed for %s %s: %s", job.company, job.title, exc)
                 results.append(scored_from_rules(job, rule, self.settings, "rules_fallback"))
                 continue
             gemini_used += 1
-            final_score = float(payload.get("score", rule.score))
             threshold = threshold_for(job, self.settings, "gemini")
+            fit_summary = str(payload.get("fit_summary", ""))
+            concerns = [str(item) for item in payload.get("concerns", [])]
+            visa_assessment = str(payload.get("visa_assessment", "unknown"))
+            gemini_text = " ".join([fit_summary, visa_assessment, " ".join(concerns)])
+            gate_allowed, final_rejections = final_alert_allowed(
+                job,
+                rule,
+                self.settings,
+                score_source="gemini",
+                gemini_valid=True,
+                gemini_text=gemini_text,
+            )
+            should_alert = (
+                bool(payload.get("should_alert", False))
+                and final_score >= threshold
+                and rule.is_candidate
+                and gate_allowed
+            )
             results.append(
                 ScoredJob(
                     job=job,
                     rule_score=rule.score,
                     final_score=final_score,
                     score_source="gemini",
-                    fit_summary=str(payload.get("fit_summary", "")),
+                    fit_summary=fit_summary,
                     matched_strengths=list(payload.get("matched_strengths", [])),
-                    concerns=list(payload.get("concerns", [])),
-                    visa_assessment=str(payload.get("visa_assessment", "unknown")),
-                    should_alert=bool(payload.get("should_alert", False))
-                    and final_score >= threshold
-                    and rule.is_candidate,
+                    concerns=concerns + final_rejections,
+                    visa_assessment=visa_assessment,
+                    should_alert=should_alert,
                     requires_gemini_review=rule.requires_gemini_review,
                     can_rule_alert=rule.can_rule_alert,
                     role_family=rule.role_family,
                     rule_reasons=rule.reasons,
-                    rejection_reasons=rule.rejection_reasons,
+                    rejection_reasons=final_rejections,
                 )
             )
         return results
@@ -106,13 +123,16 @@ class GeminiScorer:
     def _score_one(self, client: Any, job: Job) -> dict[str, Any]:
         prompt = {
             "instruction": (
-                "Be strict. Score this job for Darsh Tejusinghani. Prefer backend, systems, "
-                "AI/ML infrastructure, platform, cloud, distributed systems, and ML systems. "
-                "Penalize frontend-only, mobile-only, senior, advanced-degree-only, citizenship-required, "
-                "sales, legal, finance, support, fellowship/program, ambiguous security, and clearly "
-                "no-sponsorship roles. Unknown sponsorship is a concern, not automatic rejection. "
-                "Return only JSON with keys score, fit_summary, matched_strengths, concerns, "
-                "visa_assessment, should_alert."
+                "Return JSON only. The `score` field must be a number from 0.0 to 10.0. "
+                "Do not use percentages. Do not use 20, 30, 40, 80, 85, 90, or any score "
+                "above 10. 10 means near-perfect fit. 7 means good fit. 5 means maybe "
+                "worth reviewing. Below 5 means weak fit. Be strict. Score this job for "
+                "Darsh Tejusinghani. Prefer backend, systems, AI/ML infrastructure, platform, "
+                "cloud, distributed systems, and ML systems. Penalize frontend-only, mobile-only, "
+                "senior, advanced-degree-only, citizenship-required, sales, legal, finance, "
+                "support, fellowship/program, ambiguous security, and clearly no-sponsorship roles. "
+                "Unknown sponsorship is a concern, not automatic rejection. Return only JSON with "
+                "keys score, fit_summary, matched_strengths, concerns, visa_assessment, should_alert."
             ),
             "profile": self.profile,
             "job": job.model_dump(),
@@ -127,3 +147,22 @@ class GeminiScorer:
         if not isinstance(data, dict):
             raise ValueError("Gemini returned non-object JSON")
         return data
+
+
+def normalize_gemini_score(value: Any) -> float:
+    """Validate and normalize a Gemini score to Pivot's 0-10 scale."""
+
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise ValueError("Gemini score is missing or not numeric")
+    score = float(value)
+    if math.isnan(score) or math.isinf(score):
+        raise ValueError("Gemini score is NaN or infinite")
+    if 10 < score <= 100:
+        LOGGER.warning(
+            "Gemini returned percent-like score %.2f; normalizing by dividing by 10", score
+        )
+        score = score / 10
+    if 0 <= score <= 10:
+        return round(score, 2)
+    LOGGER.warning("Gemini score %.2f is outside 0-10 after normalization", score)
+    raise ValueError("Gemini score outside 0-10 scale")

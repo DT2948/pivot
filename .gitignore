@@ -13,4 +13,10 @@ build/
 docs/resume/*
 !docs/resume/README.md
 *.log
+# Pivot runtime/debug artifacts
+data/last_run_*.json
+data/*.log
 
+# Keep persistent alert state tracked
+!data/seen_jobs.json
+!data/.gitkeep

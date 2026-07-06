@@ -35,16 +35,36 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USE_SSL: ${{ secrets.SMTP_USE_SSL }}
           SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
           ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
         run: python -m pivot.main --config-dir config --log-level INFO
 
-      - name: Commit state and debug artifacts
+      - name: Upload Pivot debug artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pivot-debug-artifacts
+          path: |
+            data/last_run_candidates.json
+            data/last_run_rejections.json
+            data/last_run_source_health.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Commit updated seen state
+        if: github.event_name != 'pull_request'
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/*.json
-          git diff --cached --quiet || git commit -m "Update Pivot job state"
-          git push
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add data/seen_jobs.json
+
+          if git diff --cached --quiet; then
+            echo "No seen state changes to commit."
+          else
+            git commit -m "Update seen jobs state"
+            git push
+          fi

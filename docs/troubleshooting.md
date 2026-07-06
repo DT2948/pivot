@@ -1,4 +1,4 @@
-# Troubleshooting
+﻿# Troubleshooting
 
 ## Gemini API key missing
 
@@ -26,7 +26,7 @@ Check the Actions tab. Scheduled workflows can be delayed. Run manually with `wo
 
 ## Source parser failed
 
-The source should be marked failed without crashing the run. Check logs and source health. Disable the source in `config/companies.yaml` if it stays broken.
+The source should be marked `failed` without crashing the run. Placeholder adapters are marked `not_implemented`, which is expected. Check logs and source health. Disable a broken real source in `config/companies.yaml` if it stays broken.
 
 ## seen_jobs.json conflicts
 
@@ -35,3 +35,4 @@ Resolve it like any JSON merge conflict. Preserve existing records where possibl
 ## Reset seen state carefully
 
 To receive alerts again for everything, replace `data/seen_jobs.json` with `{}`. This can cause duplicate emails on the next normal run.
+

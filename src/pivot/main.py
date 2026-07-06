@@ -32,9 +32,15 @@ def parse_args() -> argparse.Namespace:
     """Parse CLI arguments."""
 
     parser = argparse.ArgumentParser(description="Pivot job alerts")
-    parser.add_argument("--dry-run", action="store_true", help="Fetch and score without emailing/state updates")
-    parser.add_argument("--send-test-email", action="store_true", help="Send one SMTP test email and exit")
-    parser.add_argument("--max-gemini-jobs", type=int, default=None, help="Override Gemini jobs per run")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Fetch and score without emailing/state updates"
+    )
+    parser.add_argument(
+        "--send-test-email", action="store_true", help="Send one SMTP test email and exit"
+    )
+    parser.add_argument(
+        "--max-gemini-jobs", type=int, default=None, help="Override Gemini jobs per run"
+    )
     parser.add_argument("--no-gemini", action="store_true", help="Disable Gemini scoring")
     parser.add_argument("--config-dir", default="config", help="Config directory")
     parser.add_argument("--log-level", default="INFO", help="Python logging level")
@@ -139,7 +145,9 @@ def fetch_all(fetchers: list[Fetcher]) -> tuple[list[Job], list[SourceHealth]]:
     return jobs, health
 
 
-def filter_jobs(jobs: list[Job], settings: dict[str, Any]) -> tuple[list[tuple[Job, RuleScore]], list[dict[str, Any]]]:
+def filter_jobs(
+    jobs: list[Job], settings: dict[str, Any]
+) -> tuple[list[tuple[Job, RuleScore]], list[dict[str, Any]]]:
     """Run rule filtering and collect rejection debug entries."""
 
     candidates: list[tuple[Job, RuleScore]] = []
@@ -163,7 +171,9 @@ def filter_jobs(jobs: list[Job], settings: dict[str, Any]) -> tuple[list[tuple[J
     return candidates, rejections
 
 
-def write_debug(scored: list[ScoredJob], rejections: list[dict[str, Any]], health: list[SourceHealth]) -> None:
+def write_debug(
+    scored: list[ScoredJob], rejections: list[dict[str, Any]], health: list[SourceHealth]
+) -> None:
     """Write last-run debug JSON files."""
 
     data_dir = Path("data")
@@ -180,6 +190,11 @@ def write_debug(scored: list[ScoredJob], rejections: list[dict[str, Any]], healt
             "score_source": item.score_source,
             "fit_summary": item.fit_summary,
             "should_alert": item.should_alert,
+            "role_family": item.role_family,
+            "requires_gemini_review": item.requires_gemini_review,
+            "can_rule_alert": item.can_rule_alert,
+            "rule_reasons": item.rule_reasons,
+            "rejection_reasons": item.rejection_reasons,
         }
         for item in scored
     ]
@@ -188,13 +203,17 @@ def write_debug(scored: list[ScoredJob], rejections: list[dict[str, Any]], healt
     _write_json(data_dir / "last_run_source_health.json", [item.model_dump() for item in health])
 
 
-def print_summary(health: list[SourceHealth], scored: list[ScoredJob], rejections: list[dict[str, Any]]) -> None:
+def print_summary(
+    health: list[SourceHealth], scored: list[ScoredJob], rejections: list[dict[str, Any]]
+) -> None:
     """Print a human-readable run summary."""
 
     print("Source health:")
     for item in health:
         error = f", {item.error}" if item.error else ""
-        print(f"- {item.source}: {item.fetched_count} fetched, {item.candidate_count} candidates, {item.status}{error}")
+        print(
+            f"- {item.source}: {item.fetched_count} fetched, {item.candidate_count} candidates, {item.status}{error}"
+        )
     print(f"Candidates: {len(scored)}")
     print(f"Rejected: {len(rejections)}")
     print(f"Would alert: {sum(1 for item in scored if item.should_alert)}")

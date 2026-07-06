@@ -1,4 +1,4 @@
-﻿"""Pydantic models used throughout Pivot."""
+"""Pydantic models used throughout Pivot."""
 
 from __future__ import annotations
 
@@ -42,6 +42,10 @@ class RuleScore(BaseModel):
     rejection_reasons: list[str] = Field(default_factory=list)
     is_candidate: bool
 
+    requires_gemini_review: bool = False
+    can_rule_alert: bool = True
+    role_family: str = "unknown"
+
 
 class ScoredJob(BaseModel):
     """Final job score after rules or Gemini."""
@@ -56,14 +60,19 @@ class ScoredJob(BaseModel):
     visa_assessment: str
     should_alert: bool
 
+    requires_gemini_review: bool = False
+    can_rule_alert: bool = True
+    role_family: str = "unknown"
+    rule_reasons: list[str] = Field(default_factory=list)
+    rejection_reasons: list[str] = Field(default_factory=list)
+
 
 class SourceHealth(BaseModel):
     """Per-source health information for a run."""
 
     source: str
     source_type: str
-    status: Literal["success", "partial", "failed"]
+    status: Literal["success", "partial", "failed", "skipped", "not_implemented"]
     fetched_count: int = 0
     candidate_count: int = 0
     error: str | None = None
-

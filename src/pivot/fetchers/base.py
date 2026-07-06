@@ -1,4 +1,4 @@
-"""Base fetcher types."""
+﻿"""Base fetcher types."""
 
 from __future__ import annotations
 
@@ -60,3 +60,16 @@ class PlaceholderFetcher(Fetcher):
 
         LOGGER.warning("%s adapter is not implemented yet: %s", self.name, self.reason)
         return []
+
+    def safe_fetch(self) -> tuple[list[Job], SourceHealth]:
+        """Report placeholder sources as not implemented instead of successful."""
+
+        LOGGER.warning("%s adapter is not implemented yet: %s", self.name, self.reason)
+        return [], SourceHealth(
+            source=self.name,
+            source_type=self.source_type,
+            status="not_implemented",
+            fetched_count=0,
+            error=self.reason,
+        )
+

@@ -1,4 +1,4 @@
-# Pivot
+﻿# Pivot
 
 Pivot monitors new-grad software engineering roles and turns noisy job feeds into a personalized shortlist.
 
@@ -90,7 +90,7 @@ To add a Greenhouse company, add a target company with `adapter: greenhouse` and
 
 ## Debugging Alerts
 
-Inspect `data/last_run_rejections.json` to see why jobs were rejected. Inspect `data/last_run_candidates.json` to see jobs that passed filtering but may not have crossed the email threshold. Source failures are in `data/last_run_source_health.json`.
+Inspect `data/last_run_rejections.json` to see why jobs were rejected. Inspect `data/last_run_candidates.json` to see jobs that passed filtering, including `role_family`, `requires_gemini_review`, and `can_rule_alert`. Source failures are in `data/last_run_source_health.json`.
 
 ## Privacy
 
@@ -99,3 +99,4 @@ Do not commit phone numbers, secrets, app passwords, or unnecessary personal dat
 ## Current Limitations
 
 Tesla, NVIDIA, Meta, Google, and Apple are graceful placeholders in this first version. Anthropic, Simplify New Grad, and SpeedyApply 2027 are the useful working sources.
+

@@ -24,13 +24,17 @@ Check `data/last_run_source_health.json`. A source may have failed or the upstre
 
 Raise thresholds in `config/settings.yaml`, lower `gemini.max_jobs_per_run`, or add stricter negative keywords in `src/pivot/filtering.py`.
 
+## Email did not send
+
+If there were no new alerts, SMTP config is not required. If there were new alerts and SMTP config was missing or sending failed, Pivot fails the run and leaves those alert jobs unseen so the next run can retry. Check the `Pivot delivery summary` log line and `data/last_run_alerts.json` for counts, priority groups, emailed status, and skip reasons.
+
 ## Workflow did not run
 
 Check the Actions tab. Scheduled workflows can be delayed. Run manually with `workflow_dispatch`.
 
 ## Source parser failed
 
-The source should be marked `failed` without crashing the run. Microsoft should normally report `success` through the official `apply.careers.microsoft.com` API. Meta may report `failed` with `Meta public careers endpoint returned 400` when its official Careers GraphQL endpoint blocks anonymous public requests from the runner. Tesla may report `failed` with a 403 when its official careers API blocks the runner. Placeholder adapters are marked `not_implemented`, which is expected for Apple until a direct adapter exists. Check logs and source health. Disable a broken real source in `config/companies.yaml` if it stays broken.
+The source should be marked `failed` without crashing the run. Microsoft should normally report `success` through the official `apply.careers.microsoft.com` API. Meta may report `failed` with `Meta public careers endpoint returned 400` when its official Careers GraphQL endpoint blocks anonymous public requests from the runner. Tesla may report `failed` with a 403 when its official careers API blocks the runner. Apple is paused for now, so it should not appear as an active fetched source unless re-enabled in `config/companies.yaml`. Placeholder adapters are marked `not_implemented`. Check logs and source health. Disable a broken real source in `config/companies.yaml` if it stays broken.
 
 ## Strong curated role did not alert
 

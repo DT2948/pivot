@@ -8,6 +8,14 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from pivot.alerts import (
+    build_alert_records,
+    delivery_summary,
+    email_config_present,
+    missing_email_config,
+    records_to_debug,
+    sort_alerts,
+)
 from pivot.config import load_config
 from pivot.dedupe import dedupe_jobs, job_key
 from pivot.emailer import send_alert_email, send_test_email
@@ -73,22 +81,77 @@ def main() -> int:
     scored = scorer.score(scored_pairs)
     seen_path = Path("data/seen_jobs.json")
     seen = load_seen(seen_path)
-    alertable = [item for item in scored if item.should_alert and is_new_or_changed(seen, item)]
+    alert_worthy = sort_alerts([item for item in scored if item.should_alert])
+    alertable = sort_alerts([item for item in alert_worthy if is_new_or_changed(seen, item)])
+    already_seen_count = len(alert_worthy) - len(alertable)
 
-    write_debug(scored, rejections, health)
+    alert_records = build_alert_records(alert_worthy, seen)
+    write_debug(scored, rejections, health, alert_records)
     print_summary(health, scored, rejections)
 
+    summary_base = {
+        "total_candidates": len(scored),
+        "alert_worthy_candidates_count": len(alert_worthy),
+        "already_seen_alerts_count": already_seen_count,
+        "new_alerts_to_email_count": len(alertable),
+        "alert_worthy": alert_worthy,
+    }
+
     if args.dry_run:
+        LOGGER.info(
+            "Pivot delivery summary: %s",
+            delivery_summary(
+                **summary_base,
+                email_send_attempted=False,
+                email_send_succeeded=False,
+            ),
+        )
         LOGGER.info("Dry run complete; not sending email or updating seen state")
         return 0
 
     alerted_keys: set[str] = set()
+    email_send_attempted = False
+    email_send_succeeded = False
     if alertable:
-        send_alert_email(alertable, health)
+        if not email_config_present():
+            missing = ", ".join(missing_email_config())
+            LOGGER.info(
+                "Pivot delivery summary: %s",
+                delivery_summary(
+                    **summary_base,
+                    email_send_attempted=False,
+                    email_send_succeeded=False,
+                ),
+            )
+            raise RuntimeError(f"Missing SMTP configuration for new alerts: {missing}")
+        email_send_attempted = True
+        try:
+            send_alert_email(alertable, health)
+            email_send_succeeded = True
+        except Exception:
+            LOGGER.exception(
+                "Pivot delivery summary: %s",
+                delivery_summary(
+                    **summary_base,
+                    email_send_attempted=email_send_attempted,
+                    email_send_succeeded=False,
+                ),
+            )
+            raise
         alerted_keys = {job_key(item.job) for item in alertable}
+        alert_records = build_alert_records(alert_worthy, seen, alerted_keys)
+        write_debug(scored, rejections, health, alert_records)
         LOGGER.info("Sent alert email for %s jobs", len(alertable))
     else:
         LOGGER.info("No new strong matches to email")
+    LOGGER.info(
+        "Pivot delivery summary: %s",
+        delivery_summary(
+            **summary_base,
+            email_send_attempted=email_send_attempted,
+            email_send_succeeded=email_send_succeeded,
+        ),
+    )
     save_seen(seen_path, update_seen(seen, scored, alerted_keys))
     return 0
 
@@ -175,7 +238,10 @@ def filter_jobs(
 
 
 def write_debug(
-    scored: list[ScoredJob], rejections: list[dict[str, Any]], health: list[SourceHealth]
+    scored: list[ScoredJob],
+    rejections: list[dict[str, Any]],
+    health: list[SourceHealth],
+    alert_records: list[Any] | None = None,
 ) -> None:
     """Write last-run debug JSON files."""
 
@@ -204,6 +270,7 @@ def write_debug(
     _write_json(data_dir / "last_run_candidates.json", candidates)
     _write_json(data_dir / "last_run_rejections.json", rejections)
     _write_json(data_dir / "last_run_source_health.json", [item.model_dump() for item in health])
+    _write_json(data_dir / "last_run_alerts.json", records_to_debug(alert_records or []))
 
 
 def print_summary(

@@ -61,7 +61,7 @@ OTHER_HARD_NEGATIVES = [
     ("advanced degree required", r"\bphd\s+required\b|\badvanced\s+degree\s+required\b"),
 ]
 
-TARGET_COMPANIES = {"anthropic", "nvidia", "tesla", "google", "microsoft", "meta", "apple"}
+TARGET_COMPANIES = {"anthropic", "nvidia", "tesla", "google", "microsoft", "meta"}
 NON_TARGET_HARD_REJECT_FAMILIES = {"sales", "legal", "product_management", "support"}
 NON_RULE_ALERT_FAMILIES = {
     "sales",

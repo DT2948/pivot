@@ -51,6 +51,7 @@ jobs:
             data/last_run_candidates.json
             data/last_run_rejections.json
             data/last_run_source_health.json
+            data/last_run_alerts.json
           if-no-files-found: warn
           retention-days: 14
 

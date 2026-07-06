@@ -82,9 +82,35 @@ RULE_ALERT_FAMILIES = {
 
 EXPERIENCE_REQUIREMENT_RE = re.compile(
     r"(?:requirements?|qualifications?|minimum qualifications?|basic qualifications?)"
-    r"[\s\S]{0,500}?\b(?:5\+|7\+|5\s+or\s+more|7\s+or\s+more)\s+years",
+    r"[\s\S]{0,700}?\b(?:3\+|4\+|5\+|6\+|7\+|8\+|9\+|10\+|"
+    r"3\s+or\s+more|4\s+or\s+more|5\s+or\s+more|7\s+or\s+more|"
+    r"3\s+years?|4\s+years?|5\s+years?|7\s+years?)",
     re.I,
 )
+TITLE_EXPLICIT_EARLY_CAREER_RE = re.compile(
+    r"\bnew\s+grad(?:uate)?\b|\buniversity\s+grad(?:uate)?\b|\bnew\s+college\s+grad\b|\bearly\s+career\b",
+    re.I,
+)
+BACHELORS_ACCEPTED_RE = re.compile(
+    r"\bbachelor(?:'s|s)?\b|\bb\.?s\.?\b|\bundergraduate\b|"
+    r"equivalent\s+practical\s+experience",
+    re.I,
+)
+ADVANCED_DEGREE_TITLE_PATTERNS: list[tuple[str, str]] = [
+    ("doctoral/postdoctoral role", r"\bdoctoral\b|\bdoctorate\b|\bpostdoc(?:toral)?\b"),
+    ("PhD-specific role", r"\bph\.?d\.?\b|\bphd\s+internship\b|\bphd\s+university\s+grad"),
+    ("Master's-specific role", r"\bmaster'?s\b|\bmasters\b|\bm\.?s\.?\b|\bmaster'?s\s+university\s+grad"),
+]
+ADVANCED_DEGREE_EXCLUSIVE_PATTERNS: list[tuple[str, str]] = [
+    ("doctoral/postdoctoral role", r"\bdoctoral\b|\bdoctorate\b|\bpostdoc(?:toral)?\b"),
+    ("advanced-degree-only role", r"\badvanced\s+degree\s+required\b"),
+    ("Master's/PhD-specific role", r"currently\s+enrolled\s+in\s+a?\s*(?:master'?s|masters|ph\.?d\.?)"),
+    ("Master's/PhD-specific role", r"pursuing\s+a?\s*(?:master'?s|masters|ph\.?d\.?)"),
+    ("PhD-specific role", r"\bph\.?d\.?\s+(?:required|internship|university\s+grad|candidate|program)\b"),
+    ("Master's-specific role", r"\bmaster'?s\s+(?:required|university\s+grad|candidate|program)\b"),
+    ("advanced-degree-only role", r"minimum\s+qualifications?[\s\S]{0,300}?\b(?:master'?s|masters|ph\.?d\.?)\b"),
+    ("graduate research role", r"\bgraduate\s+research\s+role\b|\bresearch\s+scientist[\s\S]{0,120}\bph\.?d\.?\b"),
+]
 
 US_STATE_CODES = {
     "al",
@@ -292,9 +318,14 @@ def score_job(job: Job, settings: dict[str, Any] | None = None) -> RuleScore:
             score -= 2.5
             rejections.append(f"negative keyword: {label}")
 
-    if EXPERIENCE_REQUIREMENT_RE.search(description):
+    degree_rejection = _advanced_degree_rejection_reason(job)
+    if degree_rejection:
+        score -= 4.0
+        rejections.append(degree_rejection)
+
+    if EXPERIENCE_REQUIREMENT_RE.search(description) and not TITLE_EXPLICIT_EARLY_CAREER_RE.search(job.title):
         score -= 2.5
-        rejections.append("requirements clearly ask for 5+ years experience")
+        rejections.append("years-of-experience mismatch")
 
     if not settings.get("allow_internships", False) and re.search(
         r"\bintern(ship)?\b|\bco-op\b", title_lower
@@ -349,8 +380,12 @@ def score_job(job: Job, settings: dict[str, Any] | None = None) -> RuleScore:
         reasons.append("direct target-company source")
         if job.company.lower() == "google" or job.source.lower() == "google":
             reasons.append("Google direct source")
+        if job.company.lower() == "meta" or job.source.lower() == "meta":
+            reasons.append("Meta direct source")
         if re.search(r"\buniversity\s+grad(?:uate)?\b", lower, re.I):
             reasons.append("university graduate signal")
+        if re.search(r"\bnew\s+grad(?:uate)?\b|\bnew\s+college\s+grad\b|\bearly\s+career\b", lower, re.I):
+            reasons.append("undergraduate new-grad signal")
     elif job.verification_status != "verified":
         score -= 0.4
         reasons.append("unverified curated repo source")
@@ -492,6 +527,21 @@ def is_us_location(location: str | None) -> bool:
     has_non_us = any(_location_part_is_non_us(part) for part in parts)
     return has_us or not has_non_us and False
 
+
+def _advanced_degree_rejection_reason(job: Job) -> str | None:
+    title = job.title.lower()
+    description = (job.description or "").lower()
+    for reason, pattern in ADVANCED_DEGREE_TITLE_PATTERNS:
+        if re.search(pattern, title, re.I):
+            return reason
+
+    for reason, pattern in ADVANCED_DEGREE_EXCLUSIVE_PATTERNS:
+        if not re.search(pattern, description, re.I):
+            continue
+        if "minimum" in pattern and BACHELORS_ACCEPTED_RE.search(description):
+            continue
+        return reason
+    return None
 
 def _is_direct_target_company(job: Job) -> bool:
     return job.source_type == "target_company" and job.company.lower() in TARGET_COMPANIES

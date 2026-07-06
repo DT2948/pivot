@@ -419,3 +419,119 @@ def test_curated_repo_no_sponsorship_still_blocks_candidate() -> None:
 
     assert not score.is_candidate
     assert any("sponsorship" in reason.lower() for reason in score.rejection_reasons)
+
+def make_meta_job(title: str, description: str, location: str | None = "Menlo Park, CA") -> Job:
+    return Job(
+        source="Meta",
+        source_type="target_company",
+        source_priority=20,
+        company="Meta",
+        external_id=title,
+        title=title,
+        location=location,
+        url=f"https://www.metacareers.com/jobs/{title.replace(' ', '-')}",
+        description=description,
+        verification_status="verified",
+    )
+
+
+def test_meta_software_engineer_new_grad_candidate() -> None:
+    job = make_meta_job(
+        "Software Engineer, New Grad",
+        "Build backend infrastructure and distributed systems for production services.",
+    )
+    score = score_job(job, SETTINGS)
+
+    assert score.is_candidate
+    assert score.can_rule_alert
+    assert "Meta direct source" in score.reasons
+    assert "undergraduate new-grad signal" in score.reasons
+
+
+def test_meta_software_engineer_university_graduate_candidate() -> None:
+    job = make_meta_job(
+        "Software Engineer, University Graduate",
+        "Bachelor's degree in Computer Science. Build systems infrastructure and backend services.",
+    )
+    score = score_job(job, SETTINGS)
+
+    assert score.is_candidate
+    assert score.can_rule_alert
+    assert "university graduate signal" in score.reasons
+
+
+def test_university_graduate_wording_is_not_advanced_degree_blocked() -> None:
+    job = make_meta_job(
+        "Software Engineer, University Graduate",
+        "New graduate role for Bachelor's degree candidates working on software systems.",
+    )
+    score = score_job(job, SETTINGS)
+
+    assert score.is_candidate
+    assert not any("degree" in reason.lower() for reason in score.rejection_reasons)
+
+
+def test_meta_senior_staff_manager_rejected() -> None:
+    for title in [
+        "Senior Software Engineer, Infrastructure",
+        "Staff Software Engineer, Backend",
+        "Engineering Manager, Systems",
+    ]:
+        assert not score_job(make_meta_job(title, "Backend infrastructure systems."), SETTINGS).is_candidate
+
+
+def test_three_plus_years_rejected_unless_explicit_early_career_title() -> None:
+    description = "Minimum qualifications: 3 years of experience with software development. Backend systems."
+
+    generic = score_job(make_meta_job("Software Engineer, Backend", description), SETTINGS)
+    early = score_job(make_meta_job("Software Engineer, Early Career", description), SETTINGS)
+
+    assert not generic.is_candidate
+    assert any("years-of-experience" in reason for reason in generic.rejection_reasons)
+    assert early.is_candidate
+    assert not any("years-of-experience" in reason for reason in early.rejection_reasons)
+
+
+def test_phd_specific_role_rejected() -> None:
+    job = make_meta_job(
+        "Software Engineer, PhD University Grad",
+        "PhD candidates only. Machine learning infrastructure role.",
+    )
+    score = score_job(job, SETTINGS)
+
+    assert not score.is_candidate
+    assert any("PhD-specific" in reason for reason in score.rejection_reasons)
+
+
+def test_masters_specific_role_rejected() -> None:
+    job = make_meta_job(
+        "Software Engineer, Master's University Grad",
+        "Currently enrolled in a Master's program. Backend infrastructure role.",
+    )
+    score = score_job(job, SETTINGS)
+
+    assert not score.is_candidate
+    assert any("Master" in reason for reason in score.rejection_reasons)
+
+
+def test_bachelors_or_masters_not_rejected_solely_for_masters_mention() -> None:
+    job = make_meta_job(
+        "Software Engineer, University Graduate",
+        "Minimum qualifications: Bachelor's, Master's, or PhD in Computer Science. Build backend systems.",
+    )
+    score = score_job(job, SETTINGS)
+
+    assert score.is_candidate
+    assert not any("Master" in reason or "PhD" in reason for reason in score.rejection_reasons)
+
+
+def test_meta_direct_sponsorship_and_citizenship_text_does_not_block() -> None:
+    job = make_meta_job(
+        "Software Engineer, New Grad",
+        "Backend systems. Must be authorized to work without sponsorship. U.S. citizenship required.",
+    )
+    score = score_job(job, SETTINGS)
+
+    assert score.is_candidate
+    assert not any("sponsorship" in reason.lower() for reason in score.rejection_reasons)
+    assert not any("citizenship" in reason.lower() for reason in score.rejection_reasons)

@@ -18,9 +18,10 @@
 - `gemini.max_jobs_per_run`: cap AI calls per run.
 - `gemini.min_rule_score_before_gemini`: only send stronger target-company rule candidates to Gemini.
 - `gemini.curated_min_rule_score_before_gemini`: lower default threshold for curated repo candidates, currently `5`.
-- `email`: names of environment variables used for SMTP.
+- `email`: names of environment variables used for SMTP. Set `SMTP_USE_SSL=true` when using implicit SSL on port `465`; leave it false or unset for STARTTLS on port `587`.
 - `debug`: toggles documenting generated artifacts.
 
 `config/companies.yaml` contains `target_companies` and `github_markdown_sources`. Keep GitHub sources as raw Markdown URLs from `raw.githubusercontent.com`, not normal GitHub HTML pages.
+
 
 

@@ -1,4 +1,4 @@
-﻿"""SMTP email sending."""
+"""SMTP email sending."""
 
 from __future__ import annotations
 
@@ -42,7 +42,9 @@ def send_alert_email(scored_jobs: list[ScoredJob], health: Iterable[SourceHealth
     lines.append("Source health:")
     for item in health:
         status = item.status if not item.error else f"{item.status} ({item.error})"
-        lines.append(f"- {item.source}: {item.fetched_count} fetched, {item.candidate_count} candidates, {status}")
+        lines.append(
+            f"- {item.source}: {item.fetched_count} fetched, {item.candidate_count} candidates, {status}"
+        )
     msg.set_content("\n".join(lines))
     _send(msg)
 
@@ -60,10 +62,23 @@ def _send(msg: EmailMessage) -> None:
     port = int(os.environ.get("SMTP_PORT", "587"))
     username = _required_env("SMTP_USERNAME")
     password = _required_env("SMTP_PASSWORD")
+    use_ssl = _env_bool("SMTP_USE_SSL")
+
+    if use_ssl:
+        with smtplib.SMTP_SSL(host, port, timeout=30) as smtp:
+            smtp.login(username, password)
+            smtp.send_message(msg)
+        return
+
     with smtplib.SMTP(host, port, timeout=30) as smtp:
         smtp.starttls()
         smtp.login(username, password)
         smtp.send_message(msg)
+
+
+def _env_bool(name: str) -> bool:
+    value = os.environ.get(name, "")
+    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _required_env(name: str) -> str:
@@ -71,4 +86,3 @@ def _required_env(name: str) -> str:
     if not value:
         raise RuntimeError(f"Missing required email environment variable: {name}")
     return value
-

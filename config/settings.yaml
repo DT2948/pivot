@@ -14,16 +14,16 @@ alert_thresholds:
 gemini:
   enabled: true
   model: gemini-2.5-flash-lite
-  max_jobs_per_run: 5
-  min_rule_score_before_gemini: 6
-  curated_min_rule_score_before_gemini: 5
-  fallback_to_rules: true
+  max_jobs_per_run: 2
+  min_rule_score_before_gemini: 5.0
+  curated_min_rule_score_before_gemini: 5.0
 
 email:
   smtp_host_env: SMTP_HOST
   smtp_port_env: SMTP_PORT
   smtp_username_env: SMTP_USERNAME
   smtp_password_env: SMTP_PASSWORD
+  smtp_use_ssl_env: SMTP_USE_SSL
   from_env: ALERT_EMAIL_FROM
   to_env: ALERT_EMAIL_TO
 
@@ -31,5 +31,6 @@ debug:
   write_candidates: true
   write_rejections: true
   write_source_health: true
+
 
 

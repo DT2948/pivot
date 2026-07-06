@@ -34,7 +34,7 @@ python -m pivot.main --dry-run --no-gemini
 
 For Gemini scoring, create a free Gemini API key in Google AI Studio and set `GEMINI_API_KEY`.
 
-For Gmail SMTP, use `smtp.gmail.com`, port `587`, enable 2-Step Verification, create a Gmail App Password, and store it as `SMTP_PASSWORD`. Never commit it.
+For Gmail SMTP, use `smtp.gmail.com` with either port `587` and STARTTLS or port `465` with `SMTP_USE_SSL=true`. Enable 2-Step Verification, create a Gmail App Password, and store it as `SMTP_PASSWORD`. Never commit it.
 
 Required email variables:
 
@@ -99,4 +99,5 @@ Do not commit phone numbers, secrets, app passwords, or unnecessary personal dat
 ## Current Limitations
 
 Tesla, NVIDIA, Meta, Google, and Apple are graceful placeholders in this first version. Anthropic, Simplify New Grad, and SpeedyApply 2027 are the useful working sources.
+
 

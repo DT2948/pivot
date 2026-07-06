@@ -1,4 +1,4 @@
-﻿# Pivot
+# Pivot
 
 Pivot monitors new-grad software engineering roles and turns noisy job feeds into a personalized shortlist.
 
@@ -9,10 +9,11 @@ Pivot is a personal, zero-cost job alert system. It fetches public target-compan
 - Runs locally with `python -m pivot.main`.
 - Runs every 6 hours with GitHub Actions.
 - Supports Anthropic through Greenhouse plus SimplifyJobs and SpeedyApply raw Markdown sources.
+- Keeps Tesla, NVIDIA, Meta, Google, and Apple configured as graceful best-effort placeholders until direct adapters are implemented.
 - Uses deterministic filtering before Gemini to control cost and noise.
-- Falls back to rule-only scoring if Gemini is missing, over quota, or broken.
+- Falls back safely to rules if Gemini is missing, over quota, unavailable, or broken.
 - Tracks seen jobs in `data/seen_jobs.json`.
-- Writes `data/last_run_candidates.json`, `data/last_run_rejections.json`, and `data/last_run_source_health.json`.
+- Writes ignored debug artifacts: `data/last_run_candidates.json`, `data/last_run_rejections.json`, and `data/last_run_source_health.json`.
 
 ## What It Does Not Do
 
@@ -41,10 +42,18 @@ Required email variables:
 ```text
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
+SMTP_USE_SSL=false
 SMTP_USERNAME=your-email@gmail.com
 SMTP_PASSWORD=your-gmail-app-password
 ALERT_EMAIL_FROM=your-email@gmail.com
 ALERT_EMAIL_TO=your-email@gmail.com
+```
+
+For implicit SSL, use:
+
+```text
+SMTP_PORT=465
+SMTP_USE_SSL=true
 ```
 
 Send a test email:
@@ -73,6 +82,7 @@ Push this repo to GitHub, then add repository secrets under Settings -> Secrets 
 - `GEMINI_API_KEY` optional
 - `SMTP_HOST`
 - `SMTP_PORT`
+- `SMTP_USE_SSL` optional
 - `SMTP_USERNAME`
 - `SMTP_PASSWORD`
 - `ALERT_EMAIL_FROM`
@@ -83,10 +93,14 @@ Open the Actions tab, choose `Pivot Job Alerts`, and run it manually once with `
 ## Configuration
 
 - Edit `config/profile.yaml` to tune Darsh's scoring profile.
-- Edit `config/settings.yaml` for thresholds, internship policy, visa handling, and Gemini limits.
+- Edit `config/settings.yaml` for thresholds, internship policy, visa handling, Gemini limits, and SMTP env var names.
 - Edit `config/companies.yaml` to enable or disable sources.
 
 To add a Greenhouse company, add a target company with `adapter: greenhouse` and its public board token. To add a GitHub job repo, add a raw `raw.githubusercontent.com` Markdown URL under `github_markdown_sources`.
+
+Rule-only alerts use stricter source-specific thresholds. Target-company roles without a clear new-grad or early-career signal require Gemini review before they can alert. Curated repo roles can rule-alert at the curated threshold only when they have a strong new-grad signal, pass all hard filters, and meet `curated_repo_rule_only_alert_threshold`.
+
+Gemini scores are normalized to Pivot's 0-10 scale. The run stops Gemini scoring at `gemini.max_jobs_per_run` attempted calls, treats 429 quota errors as a run-level stop, and falls back safely for required-Gemini candidates that could not be scored.
 
 ## Debugging Alerts
 
@@ -99,5 +113,3 @@ Do not commit phone numbers, secrets, app passwords, or unnecessary personal dat
 ## Current Limitations
 
 Tesla, NVIDIA, Meta, Google, and Apple are graceful placeholders in this first version. Anthropic, Simplify New Grad, and SpeedyApply 2027 are the useful working sources.
-
-

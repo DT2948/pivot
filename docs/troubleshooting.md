@@ -26,7 +26,7 @@ Raise thresholds in `config/settings.yaml`, lower `gemini.max_jobs_per_run`, or 
 
 ## Email did not send
 
-If there were no new alerts, SMTP config is not required. If there were new alerts and SMTP config was missing or sending failed, Pivot fails the run and leaves those alert jobs unseen so the next run can retry. Check the `Pivot delivery summary` log line and `data/last_run_alerts.json` for counts, priority groups, emailed status, and skip reasons.
+If there were no new alerts, SMTP config is not required. If there were new alerts and SMTP config was missing or sending failed, Pivot fails the run and leaves their successful-delivery state unchanged so the next run can retry. Check the `Pivot delivery summary` log line and `data/last_run_alerts.json` for counts, priority groups, emailed status, and skip reasons.
 
 ## Workflow did not run
 
@@ -47,3 +47,12 @@ Resolve it like any JSON merge conflict. Preserve existing records where possibl
 ## Reset seen state carefully
 
 To receive alerts again for everything, replace `data/seen_jobs.json` with `{}`. This can cause duplicate emails on the next normal run.
+
+
+## Discovered job later qualifies
+
+`seen_jobs.json` now separates discovery/scoring from delivery. Explicit `alerted_at: null` means never delivered, so an improved score can alert without a posting change. Existing delivered jobs stay suppressed unless their posting changes meaningfully. Legacy records without delivery metadata are conservatively suppressed. Do not reset tracked state during deployment. Gemini assessment reuse is independent of delivery deduplication; changing the prompt invalidates assessments without re-emailing unchanged delivered jobs.
+
+## Oracle, Intel or AMD failed
+
+Inspect the source-specific error: HTTP status (such as 403/429), timeout/connection exception, malformed JSON/schema, or missing detail description. HTTP 200 containing a challenge page is not success. No browser, proxy, login or CAPTCHA workaround is used. The rest of the run continues using other sources, including curated listings when available. The new APIs were accessible in the October 19, 2026 direct HTTP check, but runner access may differ.

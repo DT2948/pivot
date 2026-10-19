@@ -1,4 +1,4 @@
-﻿"""Alert prioritization and delivery helpers."""
+"""Alert prioritization and delivery helpers."""
 
 from __future__ import annotations
 
@@ -10,9 +10,11 @@ from typing import Any
 
 from pivot.dedupe import job_key
 from pivot.models import ScoredJob
+from pivot.state import is_new_or_changed
+from pivot.targets import ACTIVE_TARGET_COMPANIES
 
 GOOGLE = "google"
-ACTIVE_TARGET_COMPANIES = {"google", "anthropic", "nvidia", "microsoft", "meta", "tesla"}
+
 EMAIL_ENV_VARS = [
     "SMTP_HOST",
     "SMTP_USERNAME",
@@ -89,7 +91,7 @@ def build_alert_records(
         was_seen = key in seen
         emailed = key in emailed_keys
         skip_reason = None
-        if was_seen and not emailed:
+        if was_seen and not emailed and not is_new_or_changed(seen, scored):
             skip_reason = "already_seen"
         elif not emailed:
             skip_reason = "not_emailed_this_run"
@@ -191,11 +193,15 @@ def run_timestamp() -> str:
 def badges(scored: ScoredJob) -> list[str]:
     """Return compact text labels for an alert card."""
 
-    text = " ".join([scored.job.title, scored.job.description or "", " ".join(scored.rule_reasons)]).lower()
+    text = " ".join(
+        [scored.job.title, scored.job.description or "", " ".join(scored.rule_reasons)]
+    ).lower()
     labels = [priority_group(scored)]
     if _clean_company(scored.job.company) in ACTIVE_TARGET_COMPANIES:
         labels.append("Target Company")
-    labels.append("Direct Source" if scored.job.source_type == "target_company" else "Curated Source")
+    labels.append(
+        "Direct Source" if scored.job.source_type == "target_company" else "Curated Source"
+    )
     if "new-grad" in text or "new grad" in text or "university graduate" in text:
         labels.append("New Grad")
     if any(term in text for term in ["systems", "infrastructure", "platform", "distributed"]):

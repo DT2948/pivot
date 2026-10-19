@@ -5,10 +5,11 @@ from __future__ import annotations
 from typing import Any
 
 from pivot.models import Job, RuleScore, ScoredJob
+from pivot.targets import ACTIVE_TARGET_COMPANIES as TARGET_COMPANIES
 from pivot.verification import detect_visa_signal
 
 BLOCKED_ALERT_FAMILIES = {"sales", "legal", "finance", "product_management", "support"}
-TARGET_COMPANIES = {"anthropic", "nvidia", "tesla", "google", "microsoft", "meta"}
+
 HARD_REJECTION_PATTERNS = [
     "no sponsorship",
     "no cpt",

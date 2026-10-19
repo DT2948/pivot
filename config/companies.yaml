@@ -3,7 +3,7 @@ target_companies:
     adapter: greenhouse
     board_token: anthropic
     enabled: true
-    source_priority: 10
+    source_priority: 20
   - name: Tesla
     adapter: custom
     enabled: false
@@ -28,6 +28,18 @@ target_companies:
     adapter: custom
     enabled: false
     best_effort: true
+    source_priority: 20
+  - name: Oracle
+    adapter: custom
+    enabled: true
+    source_priority: 20
+  - name: Intel
+    adapter: custom
+    enabled: true
+    source_priority: 20
+  - name: AMD
+    adapter: custom
+    enabled: true
     source_priority: 20
   - name: Apple
     adapter: custom

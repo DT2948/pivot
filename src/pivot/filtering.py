@@ -6,6 +6,7 @@ import re
 from typing import Any
 
 from pivot.models import Job, RuleScore
+from pivot.targets import ACTIVE_TARGET_COMPANIES as TARGET_COMPANIES
 from pivot.verification import (
     detect_visa_signal,
     requires_security_clearance,
@@ -13,31 +14,38 @@ from pivot.verification import (
 )
 
 ROLE_POSITIVE_PATTERNS: list[tuple[str, str, float]] = [
-    ("software engineering", r"\bsoftware\s+engineer(?:ing)?\b|\bswe\b", 1.8),
+    ("software engineering", r"\bsoftware\s+(?:engineer(?:ing)?|developer)\b|\bswe\b", 1.8),
     (
         "new-grad",
-        r"\bnew\s+grad(?:uate)?\b|\buniversity\s+grad(?:uate)?\b|\bnew\s+college\s+grad\b",
+        r"\bnew\s+grad(?:uate)?\b|\buniversity\s+grad(?:uate)?\b|\bnew\s+college\s+grad(?:uate)?\b",
         3.0,
     ),
-    ("early-career", r"\bearly\s+career\b|\bentry\s+level\b|\bsoftware\s+engineer\s+i\b", 1.8),
+    (
+        "early-career",
+        r"\bearly\s+career\b|\bentry\s+level\b|\bsoftware\s+(?:engineer|developer)\s+(?:i|1)\b|\bic1\b",
+        2.8,
+    ),
     ("backend", r"\bback\s*end\b|\bbackend\b", 1.5),
     ("Rust", r"\brust\b", 1.0),
     ("performance", r"\bperformance\b", 1.2),
-    ("compiler engineering", r"\bcompiler\s+engineer(?:ing)?\b", 2.2),
-    ("compiler", r"\bcompiler\b", 1.2),
-    ("production infrastructure", r"\bproduction\s+infrastructure\b", 2.0),
-    ("infrastructure", r"\binfrastructure\b", 1.3),
+    ("compiler/runtime", r"\bcompiler\b|\bruntime\b", 2.2),
+    ("infrastructure", r"\binfrastructure\b", 1.5),
     ("platform", r"\bplatform\b", 1.0),
-    ("systems", r"\bsystems?\b", 1.0),
-    ("distributed systems", r"\bdistributed\s+systems?\b", 1.2),
-    ("ML infrastructure", r"\bml\s+infrastructure\b|\bai\s+infrastructure\b", 1.2),
+    ("systems", r"\bsystems?\b", 1.2),
+    (
+        "ML systems execution",
+        r"\b(?:ml|ai|machine learning)\s+(?:infrastructure|systems?|platform)\b|\b(?:model|inference)\s+(?:serving|infrastructure|systems?)\b|\bdistributed\s+training\b",
+        1.4,
+    ),
+    ("GPU computing software", r"\brocm\b|\bcuda\b|\bgpu\s+(?:software|computing|runtime)\b", 1.2),
     (
         "AI/ML",
-        r"\bai\b|\bml\b|\bmachine\s+learning\b|\bml\s+systems?\b|\breinforcement\s+learning\b",
+        r"\bmachine\s+learning\b|\breinforcement\s+learning\b",
         0.8,
     ),
     ("cloud", r"\bcloud\b|\baws\b|\bdocker\b|\bkubernetes\b|\bcontainers?\b", 0.7),
-    ("data platform", r"\bdata\s+platform\b", 0.9),
+    ("research implementation", r"\bresearch\s+engineer\b", 1.8),
+    ("observability/reliability", r"\bobservability\b|\bsite reliability\b", 1.0),
     ("storage/networking/databases", r"\bstorage\b|\bnetworking\b|\bdatabases?\b", 0.7),
     ("Python/C++/PyTorch", r"\bpython\b|\bc\+\+\b|\bpytorch\b|\bnetworkx\b", 0.5),
 ]
@@ -49,6 +57,8 @@ TITLE_SENIORITY_NEGATIVES = [
     ("manager", r"\bmanager\b"),
     ("director", r"\bdirector\b"),
     ("lead", r"\blead\b"),
+    ("sr", r"\bsr\.?\b"),
+    ("fellow/distinguished", r"\bfellow\b|\bdistinguished\b"),
     ("head of", r"\bhead\s+of\b"),
 ]
 
@@ -58,10 +68,9 @@ OTHER_HARD_NEGATIVES = [
     ("QA-only", r"\bqa-only\b|\bqa only\b"),
     ("IT support", r"\bit\s+support\b|\bhelp\s+desk\b"),
     ("hardware-only", r"\bhardware-only\b|\bhardware only\b"),
-    ("advanced degree required", r"\bphd\s+required\b|\badvanced\s+degree\s+required\b"),
 ]
 
-TARGET_COMPANIES = {"anthropic", "nvidia", "tesla", "google", "microsoft", "meta"}
+
 NON_TARGET_HARD_REJECT_FAMILIES = {"sales", "legal", "product_management", "support"}
 NON_RULE_ALERT_FAMILIES = {
     "sales",
@@ -88,7 +97,7 @@ EXPERIENCE_REQUIREMENT_RE = re.compile(
     re.I,
 )
 TITLE_EXPLICIT_EARLY_CAREER_RE = re.compile(
-    r"\bnew\s+grad(?:uate)?\b|\buniversity\s+grad(?:uate)?\b|\bnew\s+college\s+grad\b|\bearly\s+career\b",
+    r"\bnew\s+grad(?:uate)?\b|\buniversity\s+grad(?:uate)?\b|\bnew\s+college\s+grad(?:uate)?\b|\bearly\s+career\b",
     re.I,
 )
 BACHELORS_ACCEPTED_RE = re.compile(
@@ -107,6 +116,10 @@ ADVANCED_DEGREE_TITLE_PATTERNS: list[tuple[str, str]] = [
 ADVANCED_DEGREE_EXCLUSIVE_PATTERNS: list[tuple[str, str]] = [
     ("doctoral/postdoctoral role", r"\bdoctoral\b|\bdoctorate\b|\bpostdoc(?:toral)?\b"),
     ("advanced-degree-only role", r"\badvanced\s+degree\s+required\b"),
+    (
+        "advanced-degree-only role",
+        r"\b(?:master'?s|masters|ph\.?d\.?)(?:-only|\s+only)\b|\b(?:master'?s|masters|ph\.?d\.?)\s+(?:degree\s+)?(?:in\s+[^.;\n]{1,100}?\s+)?(?:is\s+)?(?:required|only)\b|\b(?:requires?|must have)\s+(?:a\s+)?(?:master'?s|masters|ph\.?d\.?)\b",
+    ),
     (
         "Master's/PhD-specific role",
         r"currently\s+enrolled\s+in\s+a?\s*(?:master'?s|masters|ph\.?d\.?)",
@@ -281,7 +294,7 @@ def score_job(job: Job, settings: dict[str, Any] | None = None) -> RuleScore:
 
     settings = settings or {}
     text = _job_text(job)
-    lower = text.lower()
+    lower = text.lower().replace("new-grad", "new grad").replace("early-career", "early career")
     title_lower = job.title.lower()
     description = job.description or ""
     role_family = classify_role_family(job)
@@ -299,7 +312,7 @@ def score_job(job: Job, settings: dict[str, Any] | None = None) -> RuleScore:
             score += weight
             reasons.append(label)
 
-    if not matched_positive:
+    if not matched_positive and role_family != "fellowship_program":
         rejections.append("no strong software/backend/systems/AI role keyword")
 
     if re.search(r"\bsoftware\s+engineer\b", title_lower, re.I) and re.search(
@@ -333,14 +346,24 @@ def score_job(job: Job, settings: dict[str, Any] | None = None) -> RuleScore:
             score -= 2.5
             rejections.append(f"negative keyword: {label}")
 
+    if re.search(
+        r"\brtl\b|\bphysical design\b|\bsilicon validation\b|\basic (?:design|verification|validation)\b|\bhardware engineer\b|\belectrical engineer\b|\bhardware (?:design|validation|verification)\b",
+        title_lower,
+    ) and not re.search(r"\bsoftware\b|\bcompiler\b|\bruntime\b", title_lower):
+        rejections.append("hardware-only title without software engineering responsibilities")
+
+    if job.company.lower() == "oracle" and (
+        re.search(r"\b(?:software (?:developer|engineer))\s+[3-6]\b", title_lower)
+        or re.search(r"career level\s*[-:]?\s*ic[3-6]\b", lower)
+    ):
+        rejections.append("Oracle level exceeds early career")
+
     degree_rejection = _advanced_degree_rejection_reason(job)
     if degree_rejection:
         score -= 4.0
         rejections.append(degree_rejection)
 
-    if EXPERIENCE_REQUIREMENT_RE.search(description) and not TITLE_EXPLICIT_EARLY_CAREER_RE.search(
-        job.title
-    ):
+    if EXPERIENCE_REQUIREMENT_RE.search(description):
         score -= 2.5
         rejections.append("years-of-experience mismatch")
 
@@ -406,7 +429,9 @@ def score_job(job: Job, settings: dict[str, Any] | None = None) -> RuleScore:
         if re.search(r"\buniversity\s+grad(?:uate)?\b", lower, re.I):
             reasons.append("university graduate signal")
         if re.search(
-            r"\bnew\s+grad(?:uate)?\b|\bnew\s+college\s+grad\b|\bearly\s+career\b", lower, re.I
+            r"\bnew\s+grad(?:uate)?\b|\bnew\s+college\s+grad(?:uate)?\b|\bearly\s+career\b",
+            lower,
+            re.I,
         ):
             reasons.append("undergraduate new-grad signal")
     elif job.verification_status != "verified":
@@ -519,10 +544,10 @@ def has_strong_new_grad_signal(job: Job, settings: dict[str, Any] | None = None)
     patterns = [
         r"\bnew\s+grad(?:uate)?\b",
         r"\buniversity\s+grad(?:uate)?\b",
-        r"\bnew\s+college\s+grad\b",
+        r"\bnew\s+college\s+grad(?:uate)?\b",
         r"\bentry\s+level\b",
         r"\bearly\s+career\b",
-        r"\bsoftware\s+engineer\s+i\b",
+        r"\bsoftware\s+(?:engineer|developer)\s+(?:i|1)\b|\bic1\b",
         r"\bcompiler\s+engineer\s+new\s+grad\b",
         r"\b0\s*-\s*2\b|\b0-2\s+years\b",
         r"\buniversity\s+hire\b",
@@ -553,7 +578,18 @@ def is_us_location(location: str | None) -> bool:
 
 def _advanced_degree_rejection_reason(job: Job) -> str | None:
     title = job.title.lower()
-    description = (job.description or "").lower()
+    description = (job.description or "").lower().replace("\u2019", "'")
+    # Remove explicit alternative qualification clauses, not unrelated requirements.
+    description = re.sub(r"\bph\.?d\.?", "phd", description)
+    alternative_pattern = (
+        r"bachelor(?:'s|s)?[^.;\n]{0,180}(?:or|and)[^.;\n]{0,80}(?:master|phd)|"
+        r"(?:master|phd)[^.;\n]{0,180}(?:or|and)[^.;\n]{0,80}bachelor"
+    )
+    description = ". ".join(
+        clause
+        for clause in re.split(r"[.;\n]", description)
+        if not re.search(alternative_pattern, clause, re.I)
+    )
     for reason, pattern in ADVANCED_DEGREE_TITLE_PATTERNS:
         if re.search(pattern, title, re.I):
             return reason
@@ -679,7 +715,7 @@ def _job_text(job: Job) -> str:
 def _has_new_grad_signal(lower: str) -> bool:
     return bool(
         re.search(
-            r"\bnew\s+grad(?:uate)?\b|\buniversity\s+grad(?:uate)?\b|\bnew\s+college\s+grad\b|"
+            r"\bnew\s+grad(?:uate)?\b|\buniversity\s+grad(?:uate)?\b|\bnew\s+college\s+grad(?:uate)?\b|"
             r"\bearly\s+career\b|\bentry\s+level\b|\bsoftware\s+engineer\s+i\b|\b0\s*-\s*2\b|\b0-2\s+years\b|\buniversity\s+hire\b|\bgraduate\s+program\b|\b2027\b|\b2026\b",
             lower,
             re.I,

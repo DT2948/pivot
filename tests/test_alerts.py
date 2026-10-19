@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pivot.alerts import alert_subject, build_alert_records, priority_group, sort_alerts
-from pivot.dedupe import job_key
+from pivot.dedupe import description_hash, job_key
 from pivot.models import Job, ScoredJob
 
 
@@ -82,7 +82,13 @@ def test_subject_uses_strong_match_wording_for_only_non_target_curated() -> None
 
 def test_alert_records_mark_already_seen_alerts_not_emailed() -> None:
     item = scored("Google", "Google", "target_company")
-    seen = {job_key(item.job): {"title": item.job.title}}
+    seen = {
+        job_key(item.job): {
+            "title": item.job.title,
+            "url": item.job.url,
+            "last_description_hash": description_hash(item.job.description),
+        }
+    }
 
     records = build_alert_records([item], seen)
 

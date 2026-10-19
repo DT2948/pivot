@@ -44,10 +44,23 @@ def is_new_or_changed(seen: dict[str, Any], scored: ScoredJob) -> bool:
     """Return true if a scored job has not been seen or changed meaningfully."""
 
     record = seen.get(job_key(scored.job))
-    return record is None or has_meaningful_change(record, scored)
+    if record is None:
+        return True
+    # Explicit null means discovered but never delivered. Missing legacy metadata
+    # is conservatively treated as delivered to avoid re-emailing old history.
+    if (
+        "alerted_at" in record
+        and record["alerted_at"] is None
+        and not record.get("legacy_delivery_unknown")
+    ):
+        return True
+    baseline = record.get("alerted_snapshot") or record
+    return has_meaningful_change(baseline, scored)
 
 
-def update_seen(seen: dict[str, Any], scored_jobs: list[ScoredJob], alerted_keys: set[str]) -> dict[str, Any]:
+def update_seen(
+    seen: dict[str, Any], scored_jobs: list[ScoredJob], alerted_keys: set[str]
+) -> dict[str, Any]:
     """Update state after a successful normal run."""
 
     now = datetime.now(UTC).isoformat()
@@ -59,7 +72,25 @@ def update_seen(seen: dict[str, Any], scored_jobs: list[ScoredJob], alerted_keys
         alerted_at = existing.get("alerted_at")
         if key in alerted_keys:
             alerted_at = now
+        snapshot = existing.get("alerted_snapshot")
+        if key in alerted_keys:
+            snapshot = {
+                "title": job.title,
+                "url": job.url,
+                "last_description_hash": description_hash(job.description),
+            }
+        elif snapshot is None and existing and existing.get("alerted_at", "legacy") is not None:
+            snapshot = {
+                field: existing.get(field) for field in ("title", "url", "last_description_hash")
+            }
         seen[key] = {
+            **existing,
+            "alerted_snapshot": snapshot,
+            "legacy_delivery_unknown": existing.get(
+                "legacy_delivery_unknown", bool(existing) and "alerted_at" not in existing
+            )
+            and key not in alerted_keys,
+            "assessment_cache": scored.assessment_cache or existing.get("assessment_cache"),
             "first_seen_at": first_seen,
             "last_seen_at": now,
             "alerted_at": alerted_at,

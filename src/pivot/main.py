@@ -19,13 +19,16 @@ from pivot.alerts import (
 from pivot.config import load_config
 from pivot.dedupe import dedupe_jobs, job_key
 from pivot.emailer import send_alert_email, send_test_email
+from pivot.fetchers.amd import AMDCareersFetcher
 from pivot.fetchers.apple import build_fetcher as build_apple_fetcher
 from pivot.fetchers.base import Fetcher, PlaceholderFetcher
 from pivot.fetchers.github_markdown import GitHubMarkdownAdapter, MarkdownSource
 from pivot.fetchers.google import build_fetcher as build_google_fetcher
 from pivot.fetchers.greenhouse import GreenhouseFetcher
+from pivot.fetchers.intel import IntelCareersFetcher
 from pivot.fetchers.meta import build_fetcher as build_meta_fetcher
 from pivot.fetchers.microsoft import build_fetcher as build_microsoft_fetcher
+from pivot.fetchers.oracle import OracleCareersFetcher
 from pivot.fetchers.tesla import build_fetcher as build_tesla_fetcher
 from pivot.fetchers.workday import build_nvidia_fetcher
 from pivot.filtering import score_job
@@ -77,10 +80,11 @@ def main() -> int:
     for item in health:
         item.candidate_count = sum(1 for job, _ in scored_pairs if job.source == item.source)
 
-    scorer = GeminiScorer(settings, config["profile"], no_gemini=args.no_gemini)
-    scored = scorer.score(scored_pairs)
     seen_path = Path("data/seen_jobs.json")
     seen = load_seen(seen_path)
+    scorer = GeminiScorer(settings, config["profile"], no_gemini=args.no_gemini)
+    scorer.seen = seen
+    scored = scorer.score(scored_pairs)
     alert_worthy = sort_alerts([item for item in scored if item.should_alert])
     alertable = sort_alerts([item for item in alert_worthy if is_new_or_changed(seen, item)])
     already_seen_count = len(alert_worthy) - len(alertable)
@@ -178,6 +182,14 @@ def build_fetchers(companies: dict[str, Any]) -> list[Fetcher]:
             fetchers.append(build_microsoft_fetcher(source_priority=priority))
         elif name.lower() == "google":
             fetchers.append(build_google_fetcher(source_priority=priority))
+        elif name.lower() in {"oracle", "intel", "amd"}:
+            fetchers.append(
+                {
+                    "oracle": OracleCareersFetcher,
+                    "intel": IntelCareersFetcher,
+                    "amd": AMDCareersFetcher,
+                }[name.lower()](source_priority=priority)
+            )
         elif name.lower() == "apple":
             fetchers.append(build_apple_fetcher())
         else:

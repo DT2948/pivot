@@ -484,7 +484,7 @@ def test_meta_senior_staff_manager_rejected() -> None:
         ).is_candidate
 
 
-def test_three_plus_years_rejected_unless_explicit_early_career_title() -> None:
+def test_three_plus_years_rejected_even_with_early_career_title() -> None:
     description = (
         "Minimum qualifications: 3 years of experience with software development. Backend systems."
     )
@@ -494,8 +494,8 @@ def test_three_plus_years_rejected_unless_explicit_early_career_title() -> None:
 
     assert not generic.is_candidate
     assert any("years-of-experience" in reason for reason in generic.rejection_reasons)
-    assert early.is_candidate
-    assert not any("years-of-experience" in reason for reason in early.rejection_reasons)
+    assert not early.is_candidate
+    assert any("years-of-experience" in reason for reason in early.rejection_reasons)
 
 
 def test_phd_specific_role_rejected() -> None:
@@ -606,7 +606,7 @@ def test_microsoft_senior_staff_manager_director_rejected() -> None:
         ).is_candidate
 
 
-def test_microsoft_three_plus_years_rejected_unless_early_career_title() -> None:
+def test_microsoft_three_plus_years_rejected_even_with_early_career_title() -> None:
     description = (
         "Minimum qualifications: 3 years of experience with software development. Backend systems."
     )
@@ -618,7 +618,7 @@ def test_microsoft_three_plus_years_rejected_unless_early_career_title() -> None
 
     assert not generic.is_candidate
     assert any("years-of-experience" in reason for reason in generic.rejection_reasons)
-    assert early.is_candidate
+    assert not early.is_candidate
 
 
 def test_microsoft_phd_specific_role_rejected() -> None:

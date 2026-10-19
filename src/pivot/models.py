@@ -63,6 +63,7 @@ class ScoredJob(BaseModel):
     requires_gemini_review: bool = False
     can_rule_alert: bool = True
     role_family: str = "unknown"
+    assessment_cache: dict | None = None
     rule_reasons: list[str] = Field(default_factory=list)
     rejection_reasons: list[str] = Field(default_factory=list)
 

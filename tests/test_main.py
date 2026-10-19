@@ -87,6 +87,7 @@ def setup_main(monkeypatch, scored: list[ScoredJob], seen: dict | None = None): 
         "load_config",
         lambda _: {"settings": {}, "profile": {}, "companies": {"target_companies": []}},
     )
+    monkeypatch.setattr(pivot_main, "write_debug", lambda *args, **kwargs: None)
     monkeypatch.setattr(pivot_main, "build_fetchers", lambda _: [])
     monkeypatch.setattr(pivot_main, "fetch_all", lambda _: ([], []))
     monkeypatch.setattr(pivot_main, "dedupe_jobs", lambda jobs: jobs)
@@ -168,3 +169,87 @@ def test_no_new_alerts_does_not_require_smtp_config(monkeypatch) -> None:  # typ
     assert pivot_main.main() == 0
 
     assert saved["called"] is True
+
+
+def test_previously_discovered_but_never_delivered_job_is_emailed(monkeypatch):
+    from pivot.state import update_seen
+
+    item = main_scored(should_alert=False)
+    seen = update_seen({}, [item], set())
+    item.should_alert = True
+    saved = setup_main(monkeypatch, [item], seen)
+    sent = []
+    monkeypatch.setattr(pivot_main, "email_config_present", lambda: True)
+    monkeypatch.setattr(pivot_main, "send_alert_email", lambda jobs, health: sent.extend(jobs))
+    assert pivot_main.main() == 0
+    assert sent == [item]
+    assert saved["seen"][job_key(item.job)]["alerted_at"] is not None
+
+
+def test_dry_run_never_sends_or_persists_even_with_alertable_job(monkeypatch):
+    saved = setup_main(monkeypatch, [main_scored()], {})
+    args = pivot_main.parse_args()
+    args.dry_run = True
+    monkeypatch.setattr(pivot_main, "parse_args", lambda: args)
+
+    def unexpected_send(*args):
+        raise AssertionError("dry run must not send")
+
+    monkeypatch.setattr(pivot_main, "send_alert_email", unexpected_send)
+    assert pivot_main.main() == 0
+    assert not saved["called"]
+
+
+def test_production_entry_point_builds_new_sources_without_email_or_state_writes(
+    monkeypatch, tmp_path
+):
+    from pivot.fetchers.amd import AMDCareersFetcher
+    from pivot.fetchers.intel import IntelCareersFetcher
+    from pivot.fetchers.oracle import OracleCareersFetcher
+    from pivot.models import SourceHealth
+
+    config_dir = Path(__file__).resolve().parents[1] / "config"
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        pivot_main,
+        "parse_args",
+        lambda: SimpleNamespace(
+            dry_run=True,
+            send_test_email=False,
+            max_gemini_jobs=None,
+            no_gemini=True,
+            config_dir=str(config_dir),
+            log_level="INFO",
+        ),
+    )
+    fetched = []
+    real_build = pivot_main.build_fetchers
+
+    def build_with_mocked_io(companies):
+        sources = real_build(companies)
+        for source in sources:
+
+            def safe_fetch(source=source):
+                fetched.append(source)
+                return [], SourceHealth(
+                    source=source.name, source_type=source.source_type, status="success"
+                )
+
+            monkeypatch.setattr(source, "safe_fetch", safe_fetch)
+        return sources
+
+    monkeypatch.setattr(pivot_main, "build_fetchers", build_with_mocked_io)
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("dry-run must never send or save state")
+
+    monkeypatch.setattr(pivot_main, "send_alert_email", forbidden)
+    monkeypatch.setattr(pivot_main, "save_seen", forbidden)
+    assert pivot_main.main() == 0
+    assert {type(source) for source in fetched} >= {
+        OracleCareersFetcher,
+        IntelCareersFetcher,
+        AMDCareersFetcher,
+    }
+    assert "Apple" not in {source.name for source in fetched}
+    assert not (tmp_path / "data" / "seen_jobs.json").exists()

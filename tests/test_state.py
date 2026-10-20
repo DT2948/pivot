@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from pivot.dedupe import job_key
 from pivot.models import Job, ScoredJob
 from pivot.state import has_meaningful_change, is_new_or_changed, update_seen
@@ -89,7 +91,8 @@ def test_legacy_explicit_null_delivery_metadata_remains_alertable():
     assert is_new_or_changed(seen, item)
 
 
-def test_tracked_history_migrates_without_replaying_delivered_jobs(tmp_path):
+@pytest.mark.parametrize("with_delivery_snapshots", [False, True])
+def test_tracked_history_migrates_without_replaying_delivered_jobs(tmp_path, with_delivery_snapshots):
     from copy import deepcopy
     from pathlib import Path
 
@@ -105,6 +108,15 @@ def test_tracked_history_migrates_without_replaying_delivered_jobs(tmp_path):
         # Bodies are not stored in seen state. Reconstruct an unchanged body and
         # its matching hash in the COPY, preserving every actual identity/timestamp.
         record["last_description_hash"] = description_hash("unchanged posting")
+        if with_delivery_snapshots and record.get("alerted_at") is not None:
+            # The synthetic posting must also match its delivered baseline. Build
+            # this shape even on legacy checkouts so CI covers subsequent runs.
+            record["alerted_snapshot"] = {
+                field: record[field] for field in ("title", "url", "last_description_hash")
+            }
+        else:
+            # Exercise legacy migration independently of the tracked file's shape.
+            record.pop("alerted_snapshot", None)
         item = scored("unchanged posting")
         item.job = Job(
             source=record["source"],
